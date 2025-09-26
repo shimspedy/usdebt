@@ -131,8 +131,8 @@ const server = http.createServer((req, res) => {
 });
 
 server.listen(PORT, () => {
-  // Production server running on port
-  // Access your dashboard at: http://localhost:${PORT}
+  console.log(`🚀 Production server running on port ${PORT}`);
+  console.log(`🌐 Access your dashboard at: http://localhost:${PORT}`);
 });
 
 // Graceful shutdown
