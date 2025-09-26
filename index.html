@@ -1524,10 +1524,35 @@
 
         // Initialize everything - Real-time debt clock initialization
         document.addEventListener('DOMContentLoaded', async function() {
-            console.log('🚀 Initializing US Debt Clock - API-Only Version');
+            console.log('🚀 Initializing US Debt Clock - Parent Data + API Version');
             
-            // First, fetch all API data
-            await fetchLiveData();
+            // FIRST: Initialize with parent data immediately
+            const parentData = getMostRecentParentData();
+            if (parentData.debt) {
+                liveData.currentDebt = parentData.debt;
+                liveData.debtSource = 'Historical Parent Data (Immediate Load)';
+            }
+            if (parentData.receipts) {
+                liveData.mtsData.receipts = parentData.receipts;
+                liveData.receiptsSource = 'Historical Parent Data (Immediate Load)';
+            }
+            if (parentData.outlays) {
+                liveData.mtsData.outlays = parentData.outlays;
+                liveData.outlaysSource = 'Historical Parent Data (Immediate Load)';
+            }
+            if (parentData.population) {
+                liveData.population = parentData.population;
+                liveData.populationSource = 'Historical Parent Data (Immediate Load)';
+            }
+            
+            console.log('✅ Parent data loaded immediately:', {
+                debt: '$' + (liveData.currentDebt / 1e12).toFixed(1) + 'T',
+                revenue: '$' + (liveData.mtsData.receipts / 1e12).toFixed(1) + 'T',
+                spending: '$' + (liveData.mtsData.outlays / 1e12).toFixed(1) + 'T'
+            });
+            
+            // SECOND: Try to get fresh API data (but don't wait for it)
+            fetchLiveData().catch(err => console.log('API fetch in progress:', err));
             
             // Initialize chart with real data
             setTimeout(async () => {
