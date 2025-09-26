@@ -706,21 +706,35 @@
                         debtData = await response.json();
                     }
                     
-                    // Validate and process debt data
+                    // Validate and process current debt data
                     if (debtData?.data && debtData.data.length > 0) {
+                        // Get the most recent record (first in sorted array)
                         const latestRecord = debtData.data[0];
-                        if (latestRecord.tot_pub_debt_out_amt || latestRecord.total_debt) {
-                            // Handle different field names from API
-                            const debtAmount = parseFloat(latestRecord.tot_pub_debt_out_amt || latestRecord.total_debt);
-                            if (debtAmount > 0) {
-                                liveData.currentDebt = debtAmount;
-                                liveData.debtSource = `Treasury API (${latestRecord.record_date})`;
-                                console.log('✅ VERIFIED DEBT DATA:', {
+                        console.log('📊 Latest debt record:', latestRecord);
+                        
+                        if (latestRecord.tot_pub_debt_out_amt) {
+                            // Treasury debt data is in dollars
+                            const currentDebtAmount = parseFloat(latestRecord.tot_pub_debt_out_amt);
+                            if (currentDebtAmount > 0) {
+                                liveData.currentDebt = currentDebtAmount;
+                                liveData.debtSource = `Treasury Debt API - Current (${latestRecord.record_date})`;
+                                
+                                // IMMEDIATELY update the primary debt display
+                                const primaryDebtElement = document.getElementById('primaryDebt');
+                                if (primaryDebtElement) {
+                                    primaryDebtElement.textContent = '$' + Math.round(currentDebtAmount).toLocaleString('en-US');
+                                    console.log('✅ PRIMARY DEBT UPDATED WITH CURRENT API DATA:', primaryDebtElement.textContent);
+                                }
+                                
+                                console.log('✅ CURRENT DEBT FROM TREASURY API:', {
                                     amount: liveData.currentDebt,
                                     formatted: '$' + Math.round(liveData.currentDebt).toLocaleString('en-US'),
+                                    date: latestRecord.record_date,
                                     source: liveData.debtSource
                                 });
                             }
+                        } else {
+                            console.warn('⚠️ No debt amount field in API response');
                         }
                     } else {
                         console.warn('⚠️ No valid debt data structure in API response:', debtData);
@@ -1651,16 +1665,15 @@
             console.log('  Revenue:', '$' + (liveData.mtsData.receipts / 1e12).toFixed(1) + 'T');
             console.log('  Spending:', '$' + (liveData.mtsData.outlays / 1e12).toFixed(1) + 'T');
             
-            // THIRD: Try to get fresh API data and update if successful
-            console.log('🌐 Now attempting to fetch live API data...');
-            setTimeout(async () => {
-                try {
-                    await fetchLiveData();
-                    await updateLiveStatistics(); // This will update UI if APIs succeed
-                } catch (error) {
-                    console.log('🛠️ API fetch failed, continuing with parent data:', error);
-                }
-            }, 1000); // Give parent data time to display first
+            // THIRD: IMMEDIATELY try to get fresh API data to override parent data
+            console.log('🌐 PRIORITY: Fetching current debt from Treasury API...');
+            try {
+                await fetchLiveData(); // This should update the debt display immediately
+                await updateLiveStatistics(); // This will update other UI elements if APIs succeed
+                console.log('✅ Fresh API data loaded, debt updated with current Treasury data');
+            } catch (error) {
+                console.log('🛠️ API fetch failed, using parent data:', error);
+            }
             
             // Initialize chart with real data
             setTimeout(async () => {
