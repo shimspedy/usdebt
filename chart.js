@@ -3,11 +3,14 @@ class DebtChart {
   constructor(canvasId) {
     this.canvasId = canvasId;
     this.chart = null;
-    this.dataManager = new DataManager();
-    // Use LocalDataManager for local JSON data
-    this.localDataManager = new LocalDataManager();
     
-    console.log('DebtChart: Initialized with local data support');
+    console.log('🎯 DebtChart: Constructor called with canvasId:', canvasId);
+    
+    // REMOVE POTENTIALLY FAILING DEPENDENCIES FOR NOW
+    this.dataManager = null;
+    this.localDataManager = null;
+    
+    console.log('✅ DebtChart: Constructor completed successfully');
   }
 
   /**
@@ -42,40 +45,17 @@ class DebtChart {
         console.log('✅ DebtChart: Showing loading state');
       }
 
-            // REAL CHART: Try to load local JSON data, fallback to test data
-      console.log('🧪 DebtChart: Attempting to load local data...');
-      
-      // Fallback test data
-      const testData = [
-        { year: 2020, debt: 27000000000000 },
-        { year: 2021, debt: 29000000000000 },
-        { year: 2022, debt: 31000000000000 },
-        { year: 2023, debt: 34000000000000 },
-        { year: 2024, debt: 36000000000000 }
+      // SIMPLE FIX: Use hardcoded data to test chart display
+      console.log('🧪 DebtChart: Using hardcoded test data...');
+      const debtData = [
+        { year: 2021, debt: 29617214856051.75, annual_increase: 0, formatted_debt: '$29.6T' },
+        { year: 2022, debt: 31419689421557.9, annual_increase: 1802474565506, formatted_debt: '$31.4T' },
+        { year: 2023, debt: 34001493655565.48, annual_increase: 2581804234007, formatted_debt: '$34.0T' },
+        { year: 2024, debt: 36218605311689.91, annual_increase: 2217111656124, formatted_debt: '$36.2T' },
+        { year: 2025, debt: 37454537246248.71, annual_increase: 1235931934558, formatted_debt: '$37.5T' }
       ];
       
-      let debtData;
-      
-      try {
-        const response = await fetch('/data/historical-debt.json');
-        if (response.ok) {
-          const localData = await response.json();
-          if (localData?.data?.length > 0) {
-            console.log('✅ DebtChart: Loaded', localData.records_count, 'years from local JSON');
-            debtData = localData.data;
-          } else {
-            throw new Error('No data in local JSON file');
-          }
-        } else {
-          throw new Error(`Failed to fetch local data: ${response.status}`);
-        }
-      } catch (error) {
-        console.warn('⚠️ DebtChart: Local data failed:', error.message);
-        console.log('🧪 DebtChart: Using test data...');
-        debtData = testData;
-      }
-      
-      console.log('📊 DebtChart: Final data:', debtData.length, 'years');
+      console.log('📊 DebtChart: Test data ready:', debtData.length, 'years');
       
       // Small delay to show loading state
       await new Promise(resolve => setTimeout(resolve, 500));

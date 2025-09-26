@@ -165,5 +165,32 @@
 <script src="chart.js"></script>
 <script src="app.js"></script>
 
+<!-- Direct Chart Test -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🚀 DOM loaded, testing chart directly...');
+    
+    // Wait a bit for other scripts to load
+    setTimeout(function() {
+        console.log('Chart available?', typeof Chart !== 'undefined');
+        console.log('DebtChart class available?', typeof DebtChart !== 'undefined');
+        
+        if (typeof Chart !== 'undefined' && typeof DebtChart !== 'undefined') {
+            console.log('✅ All dependencies available, creating chart...');
+            
+            // Create chart directly
+            const debtChart = new DebtChart('debtChart');
+            debtChart.init().then(() => {
+                console.log('✅ Direct chart creation completed');
+            }).catch(error => {
+                console.error('❌ Direct chart creation failed:', error);
+            });
+        } else {
+            console.error('❌ Missing dependencies for chart creation');
+        }
+    }, 2000);
+});
+</script>
+
 </body>
 </html>
