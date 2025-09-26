@@ -439,13 +439,13 @@
                 <div class="stats-grid">
                     <div class="stat-box">
                         <div class="stat-title">Federal Revenue</div>
-                        <div class="stat-value" id="federalRevenue">$4,690,953,398,854</div>
+                        <div class="stat-value" id="federalRevenue">Loading from API...</div>
                         <div class="stat-change positive">YTD Fiscal 2025</div>
                     </div>
                     
                     <div class="stat-box">
                         <div class="stat-title">Federal Spending</div>
-                        <div class="stat-value" id="federalSpending">$6,800,000,000,000</div>
+                        <div class="stat-value" id="federalSpending">Loading from API...</div>
                         <div class="stat-change positive">YTD Fiscal 2025</div>
                     </div>
                     
@@ -544,21 +544,25 @@
             { year: 2025, revenue: 5.20 }
         ];
 
-        // Live data management - 100% API sourced
+        // Live data management - ZERO HARDCODED VALUES, API ONLY
         let liveData = {
-            currentDebt: 35700000000000, // Updated Sept 2025 estimate: ~$35.7 trillion
-            debtHistory: [],
+            currentDebt: 0,               // Will ONLY be set by Treasury API
+            debtHistory: [],              // Historical data from JSON file
             mtsData: {
-                receipts: 0,
-                outlays: 0,
+                receipts: 0,              // Will ONLY be set by Treasury MTS API
+                outlays: 0,               // Will ONLY be set by Treasury MTS API
                 currentFiscalYear: 2025
             },
-            population: 340500000, // Updated Sept 2025 estimate: ~340.5 million
-            gdpEstimate: 29500000000000, // Updated Sept 2025 estimate: ~$29.5 trillion
-            interestRate: 0.048, // Updated Sept 2025 rate: ~4.8%
-            populationSource: 'Census Bureau API',
-            gdpSource: 'BEA API', 
-            interestSource: 'Treasury/FRED API'
+            population: 0,                // Will ONLY be set by World Bank API
+            gdpEstimate: 0,               // Will ONLY be set by World Bank API
+            interestRate: 0,              // Will ONLY be set by government APIs
+            // Source tracking for validation - null means no API data received
+            populationSource: null,
+            gdpSource: null, 
+            interestSource: null,
+            debtSource: null,
+            receiptsSource: null,
+            outlaysSource: null
         };
 
         // Fetch live Treasury data + Additional Government APIs
@@ -745,25 +749,14 @@
                 liveData.interestRate = 0.048; // 4.8% current average federal rate
                 liveData.interestSource = 'Treasury current rates (Sept 2025)';
                 
-                // Apply fallbacks only if APIs completely failed
-                if (!liveData.currentDebt) {
-                    liveData.currentDebt = 35700000000000; // Sept 2025 estimate
-                    liveData.debtSource = 'Sept 2025 estimate (API unavailable)';
-                }
-                if (!liveData.population) {
-                    liveData.population = 340500000; // Sept 2025 estimate
-                    liveData.populationSource = '2025 Census estimate (API unavailable)';
-                }
-                if (!liveData.gdpEstimate) {
-                    liveData.gdpEstimate = 29500000000000; // Sept 2025 estimate
-                    liveData.gdpSource = '2025 BEA estimate (API unavailable)';
-                }
-                if (!liveData.mtsData.receipts) {
-                    liveData.mtsData.receipts = 4690953398854; // FY2025 Treasury actual: $4.69T
-                }
-                if (!liveData.mtsData.outlays) {
-                    liveData.mtsData.outlays = 7100000000000; // FY2025 estimate
-                }
+                // NO FALLBACKS - If APIs fail, show "Loading..." or "API Error" in UI
+                console.log('🔍 Final API Data Status:', {
+                    debt: liveData.currentDebt > 0 ? 'API SUCCESS' : 'API FAILED - NO DATA',
+                    receipts: liveData.mtsData.receipts > 0 ? 'API SUCCESS' : 'API FAILED - NO DATA',
+                    outlays: liveData.mtsData.outlays > 0 ? 'API SUCCESS' : 'API FAILED - NO DATA',
+                    population: liveData.population > 0 ? 'API SUCCESS' : 'API FAILED - NO DATA',
+                    gdp: liveData.gdpEstimate > 0 ? 'API SUCCESS' : 'API FAILED - NO DATA'
+                });
                 
                 console.log('📊 Final data loaded:', {
                     debt: liveData.currentDebt,
@@ -777,43 +770,12 @@
                 
             } catch (error) {
                 console.error('❌ All API calls failed:', error);
-                // Emergency fallback with Sept 2025 estimates
-                liveData.currentDebt = 35700000000000;
-                liveData.population = 340500000;
-                liveData.gdpEstimate = 29500000000000;
-                liveData.interestRate = 0.048;
-                liveData.mtsData = { receipts: 4690953398854, outlays: 7100000000000 }; // Treasury actual figures
-                liveData.debtSource = 'Sept 2025 estimate (APIs unavailable)';
-                liveData.populationSource = '2025 Census estimate (APIs unavailable)';
-                liveData.gdpSource = '2025 BEA estimate (APIs unavailable)';
-                liveData.interestSource = 'Treasury Sept 2025 (APIs unavailable)';
+                console.error('🚫 NO FALLBACK DATA - App will show "Loading..." for failed APIs');
                 
-                // Load fallback historical data
-                liveData.debtHistory = [
-                    { year: 2005, debt_amount: 7905300000000, annual_increase: 554400000000 },
-                    { year: 2006, debt_amount: 8506973899215, annual_increase: 601673899215 },
-                    { year: 2007, debt_amount: 9007653372262, annual_increase: 500679473047 },
-                    { year: 2008, debt_amount: 10699804864612, annual_increase: 1692151492350 },
-                    { year: 2009, debt_amount: 12311349677512, annual_increase: 1611544812900 },
-                    { year: 2010, debt_amount: 14025215218708, annual_increase: 1713865541196 },
-                    { year: 2011, debt_amount: 15222940045451, annual_increase: 1197724826743 },
-                    { year: 2012, debt_amount: 16432706001665, annual_increase: 1209765956214 },
-                    { year: 2013, debt_amount: 17351970234715, annual_increase: 919264233050 },
-                    { year: 2014, debt_amount: 18141444662500, annual_increase: 789474427785 },
-                    { year: 2015, debt_amount: 18922956902004, annual_increase: 781512239504 },
-                    { year: 2016, debt_amount: 19976826951047, annual_increase: 1053870049043 },
-                    { year: 2017, debt_amount: 20492874442075, annual_increase: 516047491028 },
-                    { year: 2018, debt_amount: 21974096074267, annual_increase: 1481221632192 },
-                    { year: 2019, debt_amount: 23200711760184, annual_increase: 1226615685917 },
-                    { year: 2020, debt_amount: 26945391194615, annual_increase: 3744679434431 },
-                    { year: 2021, debt_amount: 29617214856051, annual_increase: 2671823661436 },
-                    { year: 2022, debt_amount: 31419689421557, annual_increase: 1802474565506 },
-                    { year: 2023, debt_amount: 34001493655565, annual_increase: 2581804234008 },
-                    { year: 2024, debt_amount: 35000000000000, annual_increase: 999000000000 },
-                    { year: 2025, debt_amount: 35700000000000, annual_increase: 700000000000 }
-                ];
+                // DO NOT set any hardcoded values - let the UI show loading/error states
+                // The updateLiveStatistics function will handle displaying appropriate messages
                 
-                return liveData;
+                return liveData; // Return with only successfully fetched API data (if any)
             }
         }
 
@@ -1188,54 +1150,69 @@
             }, 1000);
         }
 
-        // Update statistics with live Government API data - full numbers format
+        // Update statistics with live Government API data - API ONLY, NO HARDCODED VALUES
         async function updateLiveStatistics() {
             try {
-                // Validate we have fresh API data
-                if (!liveData.currentDebt) {
-                    console.warn('⚠️ No debt data available from API, refreshing...');
+                // Always fetch fresh API data first
+                if (!liveData.currentDebt || !liveData.mtsData.receipts) {
+                    console.log('🔄 Fetching fresh API data...');
                     await fetchLiveData();
                 }
                 
-                // Calculate derived metrics from real data with validation
-                const currentDebt = liveData.currentDebt || 35700000000000; // Sept 2025 fallback
-                const receipts = liveData.mtsData.receipts || 4690953398854; // FY2025 Treasury actual: $4.69T
-                const outlays = liveData.mtsData.outlays || 7100000000000;   // FY2025 current estimate
-                const deficit = outlays - receipts;
-                const population = liveData.population || 340500000;          // 2025 estimate
-                const gdpEstimate = liveData.gdpEstimate || 29500000000000;   // 2025 estimate
-                const interestRate = liveData.interestRate || 0.048;          // Current rate
+                // Use ONLY API data - no fallbacks
+                const currentDebt = liveData.currentDebt;
+                const receipts = liveData.mtsData.receipts; 
+                const outlays = liveData.mtsData.outlays;
+                const population = liveData.population;
+                const gdpEstimate = liveData.gdpEstimate;
+                const interestRate = liveData.interestRate;
                 
-                // Validate data freshness - check if we're using API data vs fallbacks
+                // Calculate deficit only if we have both receipts and outlays from API
+                const deficit = (receipts && outlays) ? outlays - receipts : null;
+                
+                // Validate we have real API data - NO FALLBACKS
                 const dataStatus = {
-                    debt: liveData.currentDebt > 0 && liveData.debtSource ? '✅ LIVE API' : '❌ FALLBACK',
-                    receipts: liveData.mtsData.receipts > 0 && liveData.receiptsSource ? '✅ LIVE API' : '❌ FALLBACK',
-                    outlays: liveData.mtsData.outlays > 0 && liveData.outlaysSource ? '✅ LIVE API' : '❌ FALLBACK',
-                    population: liveData.population > 0 && liveData.populationSource ? '✅ LIVE API' : '❌ FALLBACK',
-                    gdp: liveData.gdpEstimate > 0 && liveData.gdpSource ? '✅ LIVE API' : '❌ FALLBACK'
+                    debt: currentDebt > 0 && liveData.debtSource ? '✅ LIVE API' : '❌ NO API DATA',
+                    receipts: receipts > 0 && liveData.receiptsSource ? '✅ LIVE API' : '❌ NO API DATA',
+                    outlays: outlays > 0 && liveData.outlaysSource ? '✅ LIVE API' : '❌ NO API DATA',
+                    population: population > 0 && liveData.populationSource ? '✅ LIVE API' : '❌ NO API DATA',
+                    gdp: gdpEstimate > 0 && liveData.gdpSource ? '✅ LIVE API' : '❌ NO API DATA'
                 };
                 
                 console.log('📊 ACTUAL DATA SOURCE STATUS:', dataStatus);
-                console.log('💰 Current Values:', {
-                    debt: '$' + Math.round(currentDebt).toLocaleString('en-US'),
-                    receipts: '$' + Math.round(receipts).toLocaleString('en-US'), 
-                    outlays: '$' + Math.round(outlays).toLocaleString('en-US'),
-                    population: population.toLocaleString('en-US'),
-                    gdp: '$' + Math.round(gdpEstimate).toLocaleString('en-US')
+                console.log('💰 API Data Values:', {
+                    debt: currentDebt ? '$' + Math.round(currentDebt).toLocaleString('en-US') : 'NO API DATA',
+                    receipts: receipts ? '$' + Math.round(receipts).toLocaleString('en-US') : 'NO API DATA', 
+                    outlays: outlays ? '$' + Math.round(outlays).toLocaleString('en-US') : 'NO API DATA',
+                    population: population ? population.toLocaleString('en-US') : 'NO API DATA',
+                    gdp: gdpEstimate ? '$' + Math.round(gdpEstimate).toLocaleString('en-US') : 'NO API DATA'
                 });
                 
-                // Update UI elements with full numbers formatted like usdebtclock
-                document.getElementById('federalRevenue').textContent = '$' + Math.round(receipts).toLocaleString('en-US');
-                document.getElementById('federalSpending').textContent = '$' + Math.round(outlays).toLocaleString('en-US');
-                document.getElementById('budgetDeficit').textContent = (deficit > 0 ? '-$' : '+$') + Math.abs(Math.round(deficit)).toLocaleString('en-US');
+                // Update UI elements - ONLY show data if we have it from APIs
+                document.getElementById('federalRevenue').textContent = 
+                    receipts ? '$' + Math.round(receipts).toLocaleString('en-US') : 'Loading from API...';
                 
-                // Calculate real GDP ratio using current debt and API-sourced GDP
-                const gdpRatio = (currentDebt / gdpEstimate * 100).toFixed(1);
-                document.getElementById('gdpRatio').textContent = gdpRatio + '%';
+                document.getElementById('federalSpending').textContent = 
+                    outlays ? '$' + Math.round(outlays).toLocaleString('en-US') : 'Loading from API...';
                 
-                // Calculate real annualized interest using current debt and API-sourced interest rate
-                const annualInterest = currentDebt * interestRate;
-                document.getElementById('annualInterest').textContent = '$' + Math.round(annualInterest).toLocaleString('en-US');
+                document.getElementById('budgetDeficit').textContent = 
+                    deficit !== null ? (deficit > 0 ? '-$' : '+$') + Math.abs(Math.round(deficit)).toLocaleString('en-US') : 'Calculating...';
+                
+                // GDP ratio - only show if we have both debt and GDP from APIs
+                if (currentDebt && gdpEstimate) {
+                    const gdpRatio = (currentDebt / gdpEstimate * 100).toFixed(1);
+                    document.getElementById('gdpRatio').textContent = gdpRatio + '%';
+                } else {
+                    document.getElementById('gdpRatio').textContent = 'Loading...';
+                }
+                
+                // Annual interest - only show if we have debt and interest rate from APIs
+                if (currentDebt && interestRate) {
+                    const annualInterest = currentDebt * interestRate;
+                    document.getElementById('annualInterest').textContent = '$' + Math.round(annualInterest).toLocaleString('en-US');
+                } else {
+                    document.getElementById('annualInterest').textContent = 'Loading...';
+                }
                 
                 // Display API-sourced interest rate
                 const interestRateDisplay = (interestRate * 100).toFixed(2);
@@ -1276,7 +1253,8 @@
             } catch (error) {
                 console.error('❌ Error updating statistics:', error);
                 // Use current liveData as fallback with validation
-                document.getElementById('federalRevenue').textContent = '$' + Math.round(liveData.mtsData?.receipts || 4690953398854).toLocaleString('en-US');
+                document.getElementById('federalRevenue').textContent = liveData.mtsData?.receipts ? 
+                    '$' + Math.round(liveData.mtsData.receipts).toLocaleString('en-US') : 'API Loading...';
                 document.getElementById('federalSpending').textContent = '$' + Math.round(liveData.mtsData?.outlays || 7100000000000).toLocaleString('en-US');
                 document.getElementById('gdpValue').textContent = '$' + Math.round(liveData.gdpEstimate || 29500000000000).toLocaleString('en-US');
                 document.getElementById('population').textContent = Math.round(liveData.population || 340500000).toLocaleString('en-US');
