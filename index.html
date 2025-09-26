@@ -81,10 +81,49 @@
         .main-grid {
             display: grid;
             grid-template-columns: 1fr;
-            grid-template-rows: auto auto auto auto;
+            grid-template-rows: auto auto auto;
             gap: 20px;
             flex-grow: 1;
             min-height: 70vh;
+        }
+
+        /* Two-column layout for larger screens */
+        @media (min-width: 1024px) {
+            .main-grid {
+                grid-template-columns: 2fr 1fr;
+                grid-template-rows: auto auto;
+                gap: 25px;
+            }
+            
+            .debt-display {
+                grid-column: 1 / -1;
+            }
+            
+            .chart-section {
+                grid-column: 1;
+                grid-row: 2;
+            }
+            
+            .stats-section {
+                grid-column: 2;
+                grid-row: 2;
+                align-self: start;
+                max-height: 600px;
+                overflow-y: auto;
+            }
+            
+            .stats-grid {
+                gap: 15px;
+            }
+            
+            .stat-box {
+                padding: 15px;
+                font-size: 0.9rem;
+            }
+            
+            .stat-value {
+                font-size: 1.1rem;
+            }
         }
 
         /* Primary Debt Display */
@@ -252,8 +291,19 @@
         /* Responsive adjustments */
         @media (max-width: 768px) {
             .main-grid {
-                grid-template-columns: 1fr;
+                grid-template-columns: 1fr !important;
+                grid-template-rows: auto auto auto !important;
                 gap: 15px;
+            }
+            
+            .chart-section {
+                grid-column: 1 !important;
+                grid-row: auto !important;
+            }
+            
+            .stats-section {
+                grid-column: 1 !important;
+                grid-row: auto !important;
             }
             
             .container {
@@ -268,16 +318,8 @@
 
         @media (min-width: 1200px) {
             .main-grid {
-                grid-template-columns: 1fr 1fr;
-                grid-template-rows: auto auto auto;
-            }
-            
-            .debt-display {
-                grid-column: 1 / -1;
-            }
-            
-            .stats-section {
-                grid-column: 1 / -1;
+                grid-template-columns: 2fr 1fr;
+                gap: 30px;
             }
         }
 
@@ -369,7 +411,7 @@
                     <span style="margin: 0 15px;">•</span>
                     <span style="color: #16a34a; font-weight: bold;">� Federal Revenue</span>
                 </div>
-                <div class="chart-container" style="height: 500px;">
+                <div class="chart-container" style="height: 600px;">
                     <canvas id="comprehensiveChart"></canvas>
                 </div>
             </div>
