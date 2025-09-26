@@ -107,13 +107,19 @@
             .stats-section {
                 grid-column: 2;
                 grid-row: 2;
-                align-self: start;
-                max-height: 600px;
+                align-self: stretch;
+                height: 100%;
+                max-height: none;
                 overflow-y: auto;
+                display: flex;
+                flex-direction: column;
             }
             
             .stats-grid {
                 gap: 15px;
+                flex: 1;
+                display: grid;
+                align-content: start;
             }
             
             .stat-box {
