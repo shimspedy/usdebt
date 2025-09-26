@@ -407,15 +407,24 @@
 
             <!-- Comprehensive Fiscal Chart Section -->
             <div class="chart-section">
-                <div class="chart-title">� COMPREHENSIVE U.S. FISCAL ANALYSIS (20 Years: 2005-2025)</div>
-                <div style="text-align: center; margin-bottom: 15px; font-size: 0.9rem;">
-                    <span style="color: #ff4757; font-weight: bold;">🔴 National Debt</span>
-                    <span style="margin: 0 15px;">•</span>
-                    <span style="color: #dc2626; font-weight: bold;">� Republican Spending</span>
-                    <span style="margin: 0 15px;">•</span>
-                    <span style="color: #3b82f6; font-weight: bold;">� Democrat Spending</span>
-                    <span style="margin: 0 15px;">•</span>
-                    <span style="color: #16a34a; font-weight: bold;">� Federal Revenue</span>
+                <div class="chart-title">📊 COMPREHENSIVE U.S. FISCAL ANALYSIS (20 Years: 2005-2025)</div>
+                <div style="text-align: center; margin-bottom: 15px; font-size: 0.9rem; display: flex; justify-content: center; gap: 20px; flex-wrap: wrap;">
+                    <label style="display: flex; align-items: center; cursor: pointer; color: #ff4757; font-weight: bold;">
+                        <input type="checkbox" id="debtFilter" style="margin-right: 8px; transform: scale(1.2);" onchange="toggleDataset('debt')">
+                        🔴 National Debt ($T)
+                    </label>
+                    <label style="display: flex; align-items: center; cursor: pointer; color: #dc2626; font-weight: bold;">
+                        <input type="checkbox" id="republicanFilter" checked style="margin-right: 8px; transform: scale(1.2);" onchange="toggleDataset('republican')">
+                        🔺 Republican Spending ($T)
+                    </label>
+                    <label style="display: flex; align-items: center; cursor: pointer; color: #3b82f6; font-weight: bold;">
+                        <input type="checkbox" id="democratFilter" checked style="margin-right: 8px; transform: scale(1.2);" onchange="toggleDataset('democrat')">
+                        🔹 Democrat Spending ($T)
+                    </label>
+                    <label style="display: flex; align-items: center; cursor: pointer; color: #16a34a; font-weight: bold;">
+                        <input type="checkbox" id="revenueFilter" checked style="margin-right: 8px; transform: scale(1.2);" onchange="toggleDataset('revenue')">
+                        🟢 Federal Revenue ($T)
+                    </label>
                 </div>
                 <div class="chart-container" style="height: 600px;">
                     <canvas id="comprehensiveChart"></canvas>
@@ -424,13 +433,6 @@
 
             <!-- Statistics Section -->
             <div class="stats-section">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                    <h3 style="color: #ffffff; font-size: 1.2rem; margin: 0;">📊 Live Statistics</h3>
-                    <button id="refreshBtn" onclick="manualRefresh()" style="background: rgba(34, 197, 94, 0.2); border: 1px solid #22c55e; color: #22c55e; padding: 5px 10px; border-radius: 5px; cursor: pointer; font-size: 0.8rem;">🔄 Refresh</button>
-                </div>
-                <div id="apiStatus" style="text-align: center; margin-bottom: 10px; font-size: 0.8rem; color: #94a3b8;">
-                    Checking API status...
-                </div>
                 <div class="stats-grid">
                     <div class="stat-box">
                         <div class="stat-title">Federal Revenue</div>
@@ -740,6 +742,47 @@
             }
         }
 
+        // Global chart variable for filtering
+        let comprehensiveChart = null;
+
+        // Toggle dataset visibility
+        function toggleDataset(type) {
+            if (!comprehensiveChart) return;
+            
+            const chart = comprehensiveChart;
+            let datasetIndex = -1;
+            
+            switch(type) {
+                case 'debt':
+                    datasetIndex = chart.data.datasets.findIndex(d => d.label.includes('National Debt'));
+                    break;
+                case 'republican':
+                case 'democrat':
+                    // Both Republican and Democrat spending are in the same "Federal Spending" dataset
+                    datasetIndex = chart.data.datasets.findIndex(d => d.label.includes('Federal Spending'));
+                    break;
+                case 'revenue':
+                    datasetIndex = chart.data.datasets.findIndex(d => d.label.includes('Federal Revenue'));
+                    break;
+            }
+            
+            if (datasetIndex !== -1) {
+                const checkbox = document.getElementById(type + 'Filter');
+                const isChecked = checkbox.checked;
+                chart.setDatasetVisibility(datasetIndex, isChecked);
+                
+                // Special handling for spending - if either Republican or Democrat is unchecked, hide the whole dataset
+                if (type === 'republican' || type === 'democrat') {
+                    const republicanChecked = document.getElementById('republicanFilter').checked;
+                    const democratChecked = document.getElementById('democratFilter').checked;
+                    const shouldShow = republicanChecked || democratChecked;
+                    chart.setDatasetVisibility(datasetIndex, shouldShow);
+                }
+                
+                chart.update();
+            }
+        }
+
         // Initialize comprehensive fiscal chart with all data
         async function initializeComprehensiveChart() {
             const ctx = document.getElementById('comprehensiveChart');
@@ -821,7 +864,7 @@
                     order: 2
                 });
 
-                new Chart(ctx, {
+                comprehensiveChart = new Chart(ctx, {
                     type: 'line',
                     data: {
                         labels: labels,
@@ -936,6 +979,13 @@
                         }
                     }
                 });
+
+                // Set initial visibility - National Debt unchecked by default
+                const debtDatasetIndex = comprehensiveChart.data.datasets.findIndex(d => d.label.includes('National Debt'));
+                if (debtDatasetIndex !== -1) {
+                    comprehensiveChart.setDatasetVisibility(debtDatasetIndex, false);
+                    comprehensiveChart.update();
+                }
                 
             } catch (error) {
                 // Fallback comprehensive chart
@@ -1140,57 +1190,6 @@
             }
         }
 
-        // Manual refresh function for user-triggered updates
-        async function manualRefresh() {
-            const refreshBtn = document.getElementById('refreshBtn');
-            const apiStatus = document.getElementById('apiStatus');
-            
-            // Update UI to show refreshing
-            refreshBtn.textContent = '⏳ Refreshing...';
-            refreshBtn.disabled = true;
-            apiStatus.textContent = '🔄 Fetching latest data from government APIs...';
-            
-            try {
-                // Fetch fresh data
-                await fetchLiveData();
-                await updateLiveStatistics();
-                
-                // Update status
-                apiStatus.innerHTML = '✅ <span style="color: #22c55e;">Data updated successfully</span>';
-                updateApiStatus();
-                console.log('✅ Manual refresh completed successfully');
-                
-            } catch (error) {
-                console.error('❌ Manual refresh failed:', error);
-                apiStatus.innerHTML = '❌ <span style="color: #ef4444;">Update failed, using cached data</span>';
-            } finally {
-                // Reset button
-                setTimeout(() => {
-                    refreshBtn.textContent = '🔄 Refresh';
-                    refreshBtn.disabled = false;
-                }, 1000);
-            }
-        }
-
-        // Update API status indicator
-        function updateApiStatus() {
-            const apiStatus = document.getElementById('apiStatus');
-            if (!apiStatus) return;
-            
-            const liveDataCount = [
-                liveData.currentDebt > 0,
-                liveData.mtsData.receipts > 0,
-                liveData.mtsData.outlays > 0,
-                liveData.population > 0,
-                liveData.gdpEstimate > 0
-            ].filter(Boolean).length;
-            
-            const statusText = `📊 ${liveDataCount}/5 APIs live • Last updated: ${new Date().toLocaleTimeString()}`;
-            const statusColor = liveDataCount >= 3 ? '#22c55e' : liveDataCount >= 1 ? '#f59e0b' : '#ef4444';
-            
-            apiStatus.innerHTML = `<span style="color: ${statusColor};">${statusText}</span>`;
-        }
-
         // Update timestamp
         function updateTimestamp() {
             const now = new Date();
@@ -1228,7 +1227,6 @@
                     console.log('🔄 Refreshing data from APIs...');
                     await fetchLiveData();
                     await updateLiveStatistics();
-                    updateApiStatus();
                     console.log('✅ Data refresh completed');
                 }, 120000); // 2 minutes
             }, 1000);
