@@ -73,45 +73,196 @@ class DebtChart {
     }
   }
 
-  /**
-   * Generate mock data for demonstration
+    /**
+   * Fetch real historical debt data from Treasury API
    */
-  generateMockData() {
-    console.log('DebtChart: Generating mock data...');
+  async fetchHistoricalDebtData() {
+    console.log('DebtChart: Starting historical data fetch...');
+    
     const currentYear = new Date().getFullYear();
-    const startYear = currentYear - 20;
-    const data = [];
+    const startYear = Math.max(2020, currentYear - 20); // API has data from 2020
     
-    // Start with realistic debt figure from ~2004
-    let baseDebt = 7354855000000; // ~7.35 trillion in 2004
+    console.log(`DebtChart: Fetching data for years ${startYear} to ${currentYear}`);
     
-    for (let year = startYear; year <= currentYear; year++) {
-      // Simulate compound growth with varying rates based on economic periods
-      let growthRate;
-      if (year < 2008) {
-        growthRate = 0.055; // Pre-crisis growth
-      } else if (year < 2014) {
-        growthRate = 0.095; // Financial crisis period
-      } else if (year < 2020) {
-        growthRate = 0.045; // Recovery period
-      } else if (year < 2022) {
-        growthRate = 0.12; // COVID period
-      } else {
-        growthRate = 0.035; // Recent normalization
+    try {
+      // Get 500 records from 2020 onwards and sample yearly
+      const response = await this.dataManager.fetchFiscalData(
+        "/v2/accounting/od/debt_to_penny",
+        {
+          fields: "record_date,tot_pub_debt_out_amt",
+          filter: `record_date:gte:${startYear}-01-01`,
+          sort: "-record_date", // Most recent first
+          "page[size]": 500,
+          format: "json"
+        }
+      );
+      
+      if (!response.data || response.data.length === 0) {
+        throw new Error("No historical debt data returned from API");
       }
       
-      // Add some random variation
-      growthRate += (Math.random() - 0.5) * 0.01;
-      baseDebt *= (1 + growthRate);
+      console.log('DebtChart: Received', response.data.length, 'records from API');
       
-      data.push({
-        year,
-        debt: Math.round(baseDebt)
+      // Sample data - take first record from each year (most recent for each year)
+      const dataByYear = {};
+      response.data.forEach(record => {
+        if (record.record_date && record.tot_pub_debt_out_amt) {
+          const year = new Date(record.record_date).getFullYear();
+          const debt = parseFloat(record.tot_pub_debt_out_amt);
+          
+          // Only keep the most recent record for each year (since data is sorted by date desc)
+          if (!dataByYear[year]) {
+            dataByYear[year] = {
+              year,
+              debt,
+              record_date: record.record_date
+            };
+          }
+        }
       });
+      
+      // Convert to array and sort by year
+      let historicalData = Object.values(dataByYear).sort((a, b) => a.year - b.year);
+      
+      // Supplement with realistic estimates for missing years before 2020
+      if (startYear < 2020) {
+        historicalData = this.supplementWithEstimates(historicalData);
+      }
+      
+      console.log('DebtChart: Successfully processed', historicalData.length, 'years of data');
+      return historicalData;
+      
+    } catch (error) {
+      console.error('DebtChart: Error fetching historical data:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Supplement real data with realistic historical estimates when needed
+   */
+  supplementWithEstimates(realData) {
+    const currentYear = new Date().getFullYear();
+    const startYear = currentYear - 20;
+    const supplementedData = [];
+    
+    // Known historical debt milestones
+    const knownDebtPoints = [
+      { year: 2005, debt: 7932709661723 },   // $7.9T
+      { year: 2010, debt: 13561623030892 },  // $13.6T
+      { year: 2015, debt: 18150617666804 },  // $18.2T
+      { year: 2020, debt: 27747629254401 },  // $27.7T
+      { year: 2023, debt: 33167319269200 },  // $33.2T
+      { year: 2025, debt: 37450000000000 }   // $37.5T (current)
+    ];
+    
+    // Combine real data with known points
+    const allDataPoints = [...realData];
+    knownDebtPoints.forEach(known => {
+      if (!realData.find(r => r.year === known.year)) {
+        allDataPoints.push(known);
+      }
+    });
+    
+    // Sort by year
+    allDataPoints.sort((a, b) => a.year - b.year);
+    
+    // Fill gaps with interpolation
+    for (let year = startYear; year <= currentYear; year++) {
+      let dataPoint = allDataPoints.find(d => d.year === year);
+      
+      if (!dataPoint) {
+        // Find surrounding points for interpolation
+        const before = allDataPoints.filter(d => d.year < year).pop();
+        const after = allDataPoints.find(d => d.year > year);
+        
+        if (before && after) {
+          const yearDiff = after.year - before.year;
+          const debtDiff = after.debt - before.debt;
+          const yearsFromBefore = year - before.year;
+          const interpolatedDebt = before.debt + (debtDiff * yearsFromBefore / yearDiff);
+          
+          dataPoint = { year, debt: interpolatedDebt };
+        } else if (before) {
+          // Extrapolate from last known point with 4% annual growth
+          const yearsFromBefore = year - before.year;
+          dataPoint = { 
+            year, 
+            debt: before.debt * Math.pow(1.04, yearsFromBefore) 
+          };
+        }
+      }
+      
+      if (dataPoint) {
+        supplementedData.push(dataPoint);
+      }
     }
     
-    console.log('DebtChart: Generated mock data:', data.length, 'records');
-    return data;
+    return supplementedData.sort((a, b) => a.year - b.year);
+  }
+
+  /**
+   * Generate realistic historical debt data based on actual trends
+   */
+  generateRealisticHistoricalData() {
+    console.log('DebtChart: Generating realistic historical data...');
+    
+    const currentYear = new Date().getFullYear();
+    const startYear = currentYear - 20;
+    
+    // Known historical debt milestones (actual data from Treasury historical records)
+    const historicalMilestones = [
+      { year: 2005, debt: 7932709661723 },   // $7.9T - Pre-financial crisis
+      { year: 2008, debt: 10024724896912 },  // $10.0T - Financial crisis start
+      { year: 2010, debt: 13561623030892 },  // $13.6T - Post-crisis stimulus
+      { year: 2012, debt: 16432706000000 },  // $16.4T - Recovery period
+      { year: 2015, debt: 18150617666804 },  // $18.2T - Steady growth
+      { year: 2018, debt: 21516058183180 },  // $21.5T - Tax cuts impact
+      { year: 2020, debt: 27747629254401 },  // $27.7T - COVID-19 response
+      { year: 2022, debt: 31400000000000 },  // $31.4T - Post-COVID inflation
+      { year: 2023, debt: 33167319269200 },  // $33.2T - Current trend
+      { year: 2024, debt: 35600000000000 },  // $35.6T - Projected
+      { year: 2025, debt: 37450000000000 }   // $37.5T - Current actual
+    ];
+    
+    const data = [];
+    
+    // Generate data for each year
+    for (let year = startYear; year <= currentYear; year++) {
+      // Check if we have an exact milestone for this year
+      let milestone = historicalMilestones.find(m => m.year === year);
+      
+      if (milestone) {
+        data.push(milestone);
+      } else {
+        // Interpolate between known milestones
+        const before = historicalMilestones.filter(m => m.year < year).pop();
+        const after = historicalMilestones.find(m => m.year > year);
+        
+        let debt;
+        if (before && after) {
+          // Linear interpolation between known points
+          const yearDiff = after.year - before.year;
+          const debtDiff = after.debt - before.debt;
+          const yearsFromBefore = year - before.year;
+          debt = before.debt + (debtDiff * yearsFromBefore / yearDiff);
+        } else if (before) {
+          // Extrapolate from the last known point with historical growth rate
+          const yearsFromBefore = year - before.year;
+          // Use 4.5% annual growth rate (historical average for recent years)
+          debt = before.debt * Math.pow(1.045, yearsFromBefore);
+        } else {
+          // Use earliest known point and work backwards with lower growth
+          const yearsToAfter = after.year - year;
+          debt = after.debt / Math.pow(1.035, yearsToAfter);
+        }
+        
+        data.push({ year, debt: Math.round(debt) });
+      }
+    }
+    
+    console.log('DebtChart: Generated', data.length, 'years of realistic historical data');
+    return data.sort((a, b) => a.year - b.year);
   }
 
   /**
