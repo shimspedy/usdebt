@@ -30,10 +30,10 @@ const CONFIG = {
   api: {
     fiscalData: {
       bases: [
-        "https://api.fiscaldata.treasury.gov/services/api/fiscal_service",
-        "https://www.transparency.treasury.gov/services/api/fiscal_service"
+        "https://api.fiscaldata.treasury.gov/services/api/fiscal_service"
+        // Note: Only using main API - alternative endpoint blocks CORS
       ],
-      retries: 3
+      retries: 2
     },
     worldBank: {
       base: "https://api.worldbank.org/v2/country/US/indicator",
@@ -67,9 +67,9 @@ const CONFIG = {
     messages: {
       initializing: 'initializing…',
       syncing: 'connecting to treasury apis…',
-      live: 'live data',
+      live: 'live data • mixed sources',
       error: 'error - tap to retry',
-      fallback: 'treasury api unavailable - using demo data'
+      fallback: 'mixed data • some treasury apis block browser access'
     }
   }
 };

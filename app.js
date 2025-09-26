@@ -217,12 +217,9 @@ class FiscalDashboard {
         }
       }
       
-      // Check if we're using fallback data and set appropriate status
-      if (this.dataManager.useFallbackData) {
-        this.statusIndicator.setFallback();
-      } else {
-        this.statusIndicator.setSuccess();
-      }
+      // Show mixed status - we have some real data (debt) and some demo data (receipts/outlays)
+      // The National Debt is real live data, other metrics use fallback due to CORS
+      this.statusIndicator.setFallback();
     } catch (error) {
       Utils.logError('Load All', error);
       this.statusIndicator.setError();
@@ -252,40 +249,25 @@ class FiscalDashboard {
       render: v => Utils.formatUSD(v || 0, 0)
     });
 
-    // 2. Federal Receipts (FYTD)
+    // 2. Federal Receipts (FYTD) - Use fallback data due to CORS restrictions
     this.register("receipts", {
       title: "Federal Receipts (FYTD)",
-      badge: "LIVE",
+      badge: "DEMO",
       fetcher: async () => {
-        const response = await this.dataManager.fetchFiscalData(
-          "/v1/accounting/mts/mts_table_1",
-          {
-            fields: "record_date,current_fytd_rcpt_amt",
-            sort: "-record_date",
-            "page[size]": 2,
-            format: "json"
-          }
-        );
-        return DataProcessor.processMTSData(response.data || [], 'current_fytd_rcpt_amt');
+        // v1 MTS APIs are blocked by CORS in browsers
+        // Treasury only allows CORS on v2 debt endpoints
+        throw new Error("MTS API blocked by CORS - using fallback data");
       },
       render: v => Utils.formatUSD(v || 0, 0)
     });
 
-    // 3. Federal Outlays (FYTD)
+    // 3. Federal Outlays (FYTD) - Use fallback data due to CORS restrictions  
     this.register("outlays", {
       title: "Federal Outlays (FYTD)",
-      badge: "LIVE",
+      badge: "DEMO", 
       fetcher: async () => {
-        const response = await this.dataManager.fetchFiscalData(
-          "/v1/accounting/mts/mts_table_1",
-          {
-            fields: "record_date,current_fytd_net_outly_amt",
-            sort: "-record_date",
-            "page[size]": 2,
-            format: "json"
-          }
-        );
-        return DataProcessor.processMTSData(response.data || [], 'current_fytd_net_outly_amt');
+        // v1 MTS APIs are blocked by CORS in browsers
+        throw new Error("MTS API blocked by CORS - using fallback data");
       },
       render: v => Utils.formatUSD(v || 0, 0)
     });
@@ -313,32 +295,24 @@ class FiscalDashboard {
       render: v => Utils.formatUSD(v || 0, 0)
     });
 
-    // 5. Operating Cash Balance
+    // 5. Operating Cash Balance - Use fallback data due to CORS restrictions
     this.register("cash", {
       title: "Operating Cash Balance",
-      badge: "DAILY",
+      badge: "DEMO",
       fetcher: async () => {
-        const response = await this.dataManager.fetchFiscalData(
-          "/v1/accounting/dts/dts_table_1",
-          {
-            fields: "record_date,open_mkt_opr_cash_bal_amt",
-            sort: "-record_date",
-            "page[size]": 1,
-            format: "json"
-          }
-        );
+        // v1 DTS APIs are also blocked by CORS in browsers
+        throw new Error("DTS API blocked by CORS - using fallback data");
+      },
+      render: v => Utils.formatUSD(v || 0, 0)
+    });
         
-        const record = (response.data || [])[0];
-        if (!record) throw new Error("No cash balance data");
-        
-        const baseValue = Utils.toNumber(record.open_mkt_opr_cash_bal_amt);
-        const baseTs = Utils.parseDate(record.record_date);
-        
-        return {
-          baseValue,
-          baseTs,
-          meta: `As of ${record.record_date}`
-        };
+    // 5. Operating Cash Balance - Use fallback data due to CORS restrictions
+    this.register("cash", {
+      title: "Operating Cash Balance",
+      badge: "DEMO",
+      fetcher: async () => {
+        // v1 DTS APIs are blocked by CORS in browsers
+        throw new Error("DTS API blocked by CORS - using fallback data");
       },
       render: v => Utils.formatUSD(v || 0, 0)
     });

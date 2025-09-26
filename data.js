@@ -74,22 +74,16 @@ class DataManager {
    * @returns {Promise<Object>} JSON response
    */
   async fetchJSON(url) {
-    console.log(`🌐 Attempting to fetch: ${url}`);
-    
     const response = await fetch(url, { 
       cache: "no-store", 
       mode: "cors" 
     });
     
-    console.log(`📊 Response status: ${response.status} ${response.statusText}`);
-    
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
     
-    const data = await response.json();
-    console.log(`✅ Successfully fetched data:`, data);
-    return data;
+    return response.json();
   }
 
   /**
