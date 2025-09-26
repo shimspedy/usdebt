@@ -266,7 +266,37 @@ class DebtChart {
   }
 
   /**
-   * Create Chart.js visualization
+   * Calculate year-over-year debt increases
+   * @param {Array} data - Array of debt data by year
+   * @returns {Array} Array of annual debt increases
+   */
+  calculateDebtIncreases(data) {
+    const increases = [];
+    
+    for (let i = 0; i < data.length; i++) {
+      if (i === 0) {
+        // First year - no previous data, set to 0
+        increases.push(0);
+      } else {
+        const currentYear = data[i];
+        const previousYear = data[i - 1];
+        const increase = currentYear.debt - previousYear.debt;
+        increases.push(increase);
+      }
+    }
+    
+    // Log some interesting statistics
+    const maxIncrease = Math.max(...increases.slice(1)); // Skip first year (0)
+    const maxIncreaseIndex = increases.indexOf(maxIncrease);
+    const maxIncreaseYear = data[maxIncreaseIndex]?.year;
+    
+    console.log(`DebtChart: Largest debt increase was $${(maxIncrease / 1000000000000).toFixed(2)}T in ${maxIncreaseYear}`);
+    
+    return increases;
+  }
+
+  /**
+   * Create Chart.js visualization with debt totals and annual increases
    */
   createChart(canvas, data) {
     try {
@@ -275,33 +305,113 @@ class DebtChart {
       const ctx = canvas.getContext('2d');
       console.log('DebtChart: Got canvas context');
       
-      // Simple, reliable chart configuration
+      // Calculate year-over-year debt increases
+      const debtIncreases = this.calculateDebtIncreases(data);
+      console.log('DebtChart: Calculated', debtIncreases.length, 'debt increase data points');
+      
+      // Enhanced chart configuration with dual datasets
       this.chart = new Chart(ctx, {
         type: 'line',
         data: {
           labels: data.map(d => d.year.toString()),
-          datasets: [{
-            label: 'U.S. National Debt',
-            data: data.map(d => d.debt),
-            borderColor: '#059669',
-            backgroundColor: 'rgba(5, 150, 105, 0.1)',
-            borderWidth: 2,
-            fill: true,
-            tension: 0.3
-          }]
+          datasets: [
+            {
+              label: 'Total National Debt',
+              data: data.map(d => d.debt),
+              borderColor: '#059669',
+              backgroundColor: 'rgba(5, 150, 105, 0.1)',
+              borderWidth: 3,
+              fill: true,
+              tension: 0.3,
+              yAxisID: 'y'
+            },
+            {
+              label: 'Annual Debt Increase',
+              data: debtIncreases,
+              borderColor: '#dc2626',
+              backgroundColor: 'rgba(220, 38, 38, 0.1)',
+              borderWidth: 2,
+              fill: false,
+              tension: 0.2,
+              yAxisID: 'y1',
+              pointRadius: 4,
+              pointHoverRadius: 6
+            }
+          ]
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
+          interaction: {
+            mode: 'index',
+            intersect: false,
+          },
           plugins: {
-            legend: { display: true }
+            legend: { 
+              display: true,
+              position: 'top'
+            },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  const value = context.parsed.y;
+                  const label = context.dataset.label;
+                  
+                  if (label === 'Total National Debt') {
+                    return `${label}: $${(value / 1000000000000).toFixed(2)}T`;
+                  } else {
+                    const sign = value >= 0 ? '+' : '';
+                    return `${label}: ${sign}$${(value / 1000000000000).toFixed(2)}T`;
+                  }
+                }
+              }
+            }
           },
           scales: {
+            x: {
+              display: true,
+              title: {
+                display: true,
+                text: 'Fiscal Year'
+              }
+            },
             y: {
+              type: 'linear',
+              display: true,
+              position: 'left',
+              title: {
+                display: true,
+                text: 'Total Debt (Trillions $)',
+                color: '#059669'
+              },
               ticks: {
                 callback: function(value) {
                   return '$' + (value / 1000000000000).toFixed(1) + 'T';
-                }
+                },
+                color: '#059669'
+              },
+              grid: {
+                drawOnChartArea: true
+              }
+            },
+            y1: {
+              type: 'linear',
+              display: true,
+              position: 'right',
+              title: {
+                display: true,
+                text: 'Annual Increase (Trillions $)',
+                color: '#dc2626'
+              },
+              ticks: {
+                callback: function(value) {
+                  const sign = value >= 0 ? '+' : '';
+                  return sign + '$' + (value / 1000000000000).toFixed(1) + 'T';
+                },
+                color: '#dc2626'
+              },
+              grid: {
+                drawOnChartArea: false
               }
             }
           }
