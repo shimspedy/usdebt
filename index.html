@@ -451,7 +451,7 @@
                     
                     <div class="stat-box">
                         <div class="stat-title">Budget Deficit</div>
-                        <div class="stat-value" id="budgetDeficit">-$1,900,000,000,000</div>
+                        <div class="stat-value" id="budgetDeficit">Loading from API...</div>
                         <div class="stat-change negative">YTD Fiscal 2025</div>
                     </div>
                     
@@ -1117,37 +1117,142 @@
             }, 16);
         }
 
-        // Live debt counter with real data - usdebtclock format
+        // Real-time debt clock system - ALL metrics update live from API data ONLY
+        let realtimeCounters = {
+            debt: 0,
+            revenue: 0,
+            spending: 0,
+            debtPerSecond: 0,
+            revenuePerSecond: 0,
+            spendingPerSecond: 0,
+            lastApiUpdate: Date.now()
+        };
+
         async function startLiveCounter() {
+            console.log('🚀 Starting real-time debt clock...');
+            
+            // Only start if we have API data
+            if (!liveData.currentDebt || liveData.currentDebt === 0) {
+                console.warn('⚠️ No debt API data - waiting for API response');
+                // Retry every 5 seconds until we get API data
+                setTimeout(startLiveCounter, 5000);
+                return;
+            }
+
             const primaryDebt = document.getElementById('primaryDebt');
+            if (!primaryDebt) {
+                console.error('❌ Primary debt element not found');
+                return;
+            }
             
-            // Use real current debt as starting point - ensure we have data
-            let currentDebt = liveData.currentDebt || 37454537246248.71;
+            // Initialize counters with API data ONLY
+            realtimeCounters.debt = liveData.currentDebt;
+            realtimeCounters.revenue = liveData.mtsData.receipts || 0;
+            realtimeCounters.spending = liveData.mtsData.outlays || 0;
+
+            // Calculate per-second rates from API data ONLY - NO FALLBACKS
+            if (liveData.debtHistory && liveData.debtHistory.length > 0) {
+                const latestYear = liveData.debtHistory[liveData.debtHistory.length - 1];
+                realtimeCounters.debtPerSecond = latestYear?.annual_increase ? 
+                    latestYear.annual_increase / (365 * 24 * 60 * 60) : 0;
+                console.log('📈 Debt increase per second:', realtimeCounters.debtPerSecond.toLocaleString());
+            } else {
+                console.warn('⚠️ No historical debt data for rate calculation');
+            }
             
-            // Calculate realistic debt increase rate from historical data
-            const latestYear = liveData.debtHistory && liveData.debtHistory.length > 0 ? 
-                liveData.debtHistory[liveData.debtHistory.length - 1] : null;
-            const debtPerSecond = latestYear?.annual_increase ? 
-                latestYear.annual_increase / (365 * 24 * 60 * 60) : // Real rate from data
-                39201; // Fallback rate (calculated from real 2025 data)
-            
+            // Calculate revenue/spending rates from API data
+            const fiscalYearSeconds = 365 * 24 * 60 * 60;
+            if (realtimeCounters.revenue > 0) {
+                realtimeCounters.revenuePerSecond = realtimeCounters.revenue / fiscalYearSeconds;
+            }
+            if (realtimeCounters.spending > 0) {
+                realtimeCounters.spendingPerSecond = realtimeCounters.spending / fiscalYearSeconds;
+            }
+
+            console.log('⏱️ Real-time rates from API data:', {
+                debtPerSecond: '$' + realtimeCounters.debtPerSecond.toLocaleString(),
+                revenuePerSecond: '$' + realtimeCounters.revenuePerSecond.toLocaleString(),
+                spendingPerSecond: '$' + realtimeCounters.spendingPerSecond.toLocaleString()
+            });
+
+            // Update all counters every second
             setInterval(() => {
-                currentDebt += debtPerSecond;
-                
-                // Format like usdebtclock.org - full number with commas
-                const formattedDebt = '$' + Math.round(currentDebt).toLocaleString('en-US');
-                primaryDebt.textContent = formattedDebt;
-                
-                // Update derived statistics with real data - full numbers
-                const population = liveData.population || 340110988; // Use API data or fallback
-                const taxpayers = population * 0.39; // Approximate percentage of taxpayers
-                
-                document.getElementById('debtPerCitizen').textContent = 
-                    '$' + Math.round(currentDebt / population).toLocaleString('en-US');
-                document.getElementById('debtPerTaxpayer').textContent = 
-                    '$' + Math.round(currentDebt / taxpayers).toLocaleString('en-US');
+                // Update debt in real-time
+                if (realtimeCounters.debtPerSecond > 0) {
+                    realtimeCounters.debt += realtimeCounters.debtPerSecond;
+                    primaryDebt.textContent = '$' + Math.round(realtimeCounters.debt).toLocaleString('en-US');
+                }
+
+                // Update revenue in real-time (fiscal year accumulation)
+                if (realtimeCounters.revenuePerSecond > 0) {
+                    realtimeCounters.revenue += realtimeCounters.revenuePerSecond;
+                    const revenueElement = document.getElementById('federalRevenue');
+                    if (revenueElement) {
+                        revenueElement.textContent = '$' + Math.round(realtimeCounters.revenue).toLocaleString('en-US');
+                    }
+                }
+
+                // Update spending in real-time (fiscal year accumulation)
+                if (realtimeCounters.spendingPerSecond > 0) {
+                    realtimeCounters.spending += realtimeCounters.spendingPerSecond;
+                    const spendingElement = document.getElementById('federalSpending');
+                    if (spendingElement) {
+                        spendingElement.textContent = '$' + Math.round(realtimeCounters.spending).toLocaleString('en-US');
+                    }
+                }
+
+                // Update budget deficit in real-time
+                if (realtimeCounters.spending > 0 && realtimeCounters.revenue > 0) {
+                    const deficit = realtimeCounters.spending - realtimeCounters.revenue;
+                    const deficitElement = document.getElementById('budgetDeficit');
+                    if (deficitElement) {
+                        deficitElement.textContent = (deficit > 0 ? '-$' : '+$') + Math.abs(Math.round(deficit)).toLocaleString('en-US');
+                    }
+                }
+
+                // Update per-citizen and per-taxpayer in real-time (API data only)
+                if (liveData.population > 0 && realtimeCounters.debt > 0) {
+                    const population = liveData.population;
+                    const taxpayers = population * 0.39;
                     
+                    const debtPerCitizen = document.getElementById('debtPerCitizen');
+                    const debtPerTaxpayer = document.getElementById('debtPerTaxpayer');
+                    
+                    if (debtPerCitizen) {
+                        debtPerCitizen.textContent = '$' + Math.round(realtimeCounters.debt / population).toLocaleString('en-US');
+                    }
+                    if (debtPerTaxpayer) {
+                        debtPerTaxpayer.textContent = '$' + Math.round(realtimeCounters.debt / taxpayers).toLocaleString('en-US');
+                    }
+                } else {
+                    // Show loading state if no API data
+                    const debtPerCitizen = document.getElementById('debtPerCitizen');
+                    const debtPerTaxpayer = document.getElementById('debtPerTaxpayer');
+                    if (debtPerCitizen) debtPerCitizen.textContent = 'Loading API...';
+                    if (debtPerTaxpayer) debtPerTaxpayer.textContent = 'Loading API...';
+                }
             }, 1000);
+
+            // Refresh from APIs every 60 seconds to maintain accuracy
+            setInterval(async () => {
+                console.log('🔄 Refreshing all data from government APIs...');
+                await fetchLiveData();
+                await updateLiveStatistics();
+                
+                // Resync counters with fresh API data
+                if (liveData.currentDebt > 0) {
+                    realtimeCounters.debt = liveData.currentDebt;
+                    console.log('🔄 Debt counter resynced with API:', realtimeCounters.debt.toLocaleString());
+                }
+                if (liveData.mtsData.receipts > 0) {
+                    realtimeCounters.revenue = liveData.mtsData.receipts;
+                    realtimeCounters.revenuePerSecond = realtimeCounters.revenue / (365 * 24 * 60 * 60);
+                }
+                if (liveData.mtsData.outlays > 0) {
+                    realtimeCounters.spending = liveData.mtsData.outlays;
+                    realtimeCounters.spendingPerSecond = realtimeCounters.spending / (365 * 24 * 60 * 60);
+                }
+            }, 60000); // Refresh every minute like a real debt clock
         }
 
         // Update statistics with live Government API data - API ONLY, NO HARDCODED VALUES
@@ -1275,9 +1380,11 @@
                 `🟢 LIVE • Last updated: ${timeString}`;
         }
 
-        // Initialize everything
+        // Initialize everything - Real-time debt clock initialization
         document.addEventListener('DOMContentLoaded', async function() {
-            // First, fetch all data
+            console.log('🚀 Initializing US Debt Clock - API-Only Version');
+            
+            // First, fetch all API data
             await fetchLiveData();
             
             // Initialize chart with real data
@@ -1287,20 +1394,20 @@
                 }
             }, 500);
             
-            // Update statistics immediately with loaded data
+            // Update statistics and start live counters
             setTimeout(async () => {
                 await updateLiveStatistics();
                 
-                // Start live counter with real debt
+                // Start live counter with real debt - this handles its own refresh cycle
                 await startLiveCounter();
                 
-                // Refresh statistics every 2 minutes for more current data
+                // Additional API refresh every 30 seconds to stay current (like real debt clocks)
                 setInterval(async () => {
-                    console.log('🔄 Refreshing data from APIs...');
+                    console.log('🔄 Refreshing all APIs for maximum accuracy...');
                     await fetchLiveData();
                     await updateLiveStatistics();
-                    console.log('✅ Data refresh completed');
-                }, 120000); // 2 minutes
+                    console.log('✅ API refresh cycle completed');
+                }, 30000); // 30 seconds - more frequent like real debt clocks
             }, 1000);
             
             // Update timestamp every second
