@@ -674,15 +674,6 @@
                                     yAxisID: 'y'
                                 },
                                 {
-                                    label: 'Federal Revenue ($T)',
-                                    data: federalRevenue.map(d => d.revenue),
-                                    borderColor: '#16a34a',
-                                    backgroundColor: 'rgba(22, 163, 74, 0.1)',
-                                    fill: false,
-                                    tension: 0.2,
-                                    yAxisID: 'y'
-                                },
-                                {
                                     label: 'Annual Increase ($B)',
                                     data: annualIncrease,
                                     borderColor: '#ffa502',
@@ -698,7 +689,7 @@
                             plugins: {
                                 title: {
                                     display: true,
-                                    text: 'DEBT & REVENUE TRAJECTORY (20 Years: 2005-2025)',
+                                    text: 'DEBT GROWTH TRAJECTORY (20 Years: 2005-2025)',
                                     color: '#ffffff',
                                     font: { size: 16, weight: 'bold' }
                                 },
@@ -735,7 +726,7 @@
                                     },
                                     title: {
                                         display: true,
-                                        text: 'Debt & Revenue ($T)',
+                                        text: 'Total Debt ($T)',
                                         color: '#ff4757'
                                     }
                                 },
@@ -777,13 +768,6 @@
                                 backgroundColor: 'rgba(255, 71, 87, 0.1)',
                                 fill: true,
                                 tension: 0.2
-                            }, {
-                                label: 'Federal Revenue ($T)',
-                                data: [2.15, 2.41, 2.57, 2.52, 2.10, 2.16, 2.30, 2.45, 2.77, 3.02, 3.25, 3.27, 3.32, 3.33, 3.46, 3.42, 4.05, 4.90, 4.44, 4.92, 5.20],
-                                borderColor: '#16a34a',
-                                backgroundColor: 'rgba(22, 163, 74, 0.1)',
-                                fill: false,
-                                tension: 0.2
                             }]
                         },
                         options: {
@@ -791,7 +775,7 @@
                             plugins: {
                                 title: {
                                     display: true,
-                                    text: 'DEBT & REVENUE TRAJECTORY (20 Years: 2005-2025)',
+                                    text: 'DEBT GROWTH TRAJECTORY (20 Years: 2005-2025)',
                                     color: '#ffffff',
                                     font: { size: 16, weight: 'bold' }
                                 },
@@ -810,16 +794,16 @@
                                 },
                                 y: {
                                     ticks: { 
-                                        color: '#ffffff',
+                                        color: '#ff4757',
                                         callback: function(value) {
                                             return '$' + value.toFixed(1) + 'T';
                                         }
                                     },
-                                    grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                                    grid: { color: 'rgba(255, 71, 87, 0.2)' },
                                     title: {
                                         display: true,
-                                        text: 'Amount (Trillions $)',
-                                        color: '#ffffff'
+                                        text: 'National Debt ($T)',
+                                        color: '#ff4757'
                                     }
                                 }
                             }
@@ -848,11 +832,22 @@
                     data: {
                         labels: presidentialSpending.map(d => d.year),
                         datasets: [{
-                            label: 'Federal Spending (Trillions)',
+                            label: 'Federal Spending ($T)',
                             data: presidentialSpending.map(d => d.spending),
                             backgroundColor: backgroundColors,
                             borderColor: borderColors,
                             borderWidth: 2
+                        }, {
+                            label: 'Federal Revenue ($T)',
+                            data: federalRevenue.map(d => d.revenue),
+                            type: 'line',
+                            borderColor: '#16a34a',
+                            backgroundColor: 'rgba(22, 163, 74, 0.1)',
+                            fill: false,
+                            tension: 0.2,
+                            pointBackgroundColor: '#16a34a',
+                            pointBorderColor: '#16a34a',
+                            pointRadius: 4
                         }]
                     },
                     options: {
@@ -860,12 +855,15 @@
                         plugins: {
                             title: {
                                 display: true,
-                                text: 'Federal Spending by President & Party (2005-2025)',
+                                text: 'Federal Spending & Revenue by President (2005-2025)',
                                 color: '#ffffff',
                                 font: { size: 16, weight: 'bold' }
                             },
                             legend: {
-                                display: false
+                                display: true,
+                                labels: {
+                                    color: '#ffffff'
+                                }
                             },
                             tooltip: {
                                 callbacks: {
@@ -874,12 +872,22 @@
                                         return presidentialSpending[dataIndex].president;
                                     },
                                     label: function(context) {
-                                        return `Spending: $${context.parsed.y.toFixed(2)}T`;
+                                        if (context.datasetIndex === 0) {
+                                            return `Spending: $${context.parsed.y.toFixed(2)}T`;
+                                        } else {
+                                            return `Revenue: $${context.parsed.y.toFixed(2)}T`;
+                                        }
                                     },
                                     afterLabel: function(context) {
-                                        const dataIndex = context.dataIndex;
-                                        const party = presidentialSpending[dataIndex].party === 'R' ? 'Republican' : 'Democrat';
-                                        return `Party: ${party}`;
+                                        if (context.datasetIndex === 0) {
+                                            const dataIndex = context.dataIndex;
+                                            const party = presidentialSpending[dataIndex].party === 'R' ? 'Republican' : 'Democrat';
+                                            const spending = presidentialSpending[dataIndex].spending;
+                                            const revenue = federalRevenue[dataIndex].revenue;
+                                            const deficit = spending - revenue;
+                                            return [`Party: ${party}`, `Deficit: $${deficit.toFixed(2)}T`];
+                                        }
+                                        return '';
                                     }
                                 }
                             }
@@ -907,7 +915,7 @@
                                 },
                                 title: {
                                     display: true,
-                                    text: 'Federal Spending (Trillions)',
+                                    text: 'Amount ($T)',
                                     color: '#ffffff'
                                 }
                             }
@@ -921,13 +929,24 @@
                     new Chart(ctx, {
                         type: 'bar',
                         data: {
-                            labels: ['2005-2008', '2009-2016', '2017-2020', '2021-2025'],
+                            labels: ['Bush 05-08', 'Obama 09-16', 'Trump 17-20', 'Biden 21-25'],
                             datasets: [{
-                                label: 'Avg Spending (Trillions)',
+                                label: 'Avg Spending ($T)',
                                 data: [2.71, 3.58, 4.77, 6.68],
-                                backgroundColor: ['#dc2626', '#3b82f6', '#dc2626', '#3b82f6'],
+                                backgroundColor: ['rgba(220, 38, 38, 0.7)', 'rgba(59, 130, 246, 0.7)', 'rgba(220, 38, 38, 0.7)', 'rgba(59, 130, 246, 0.7)'],
                                 borderColor: ['#dc2626', '#3b82f6', '#dc2626', '#3b82f6'],
                                 borderWidth: 2
+                            }, {
+                                label: 'Avg Revenue ($T)',
+                                data: [2.39, 2.96, 3.45, 4.63],
+                                type: 'line',
+                                borderColor: '#16a34a',
+                                backgroundColor: 'rgba(22, 163, 74, 0.1)',
+                                fill: false,
+                                tension: 0.2,
+                                pointBackgroundColor: '#16a34a',
+                                pointBorderColor: '#16a34a',
+                                pointRadius: 6
                             }]
                         },
                         options: {
@@ -935,10 +954,15 @@
                             plugins: {
                                 title: {
                                     display: true,
-                                    text: 'Federal Spending by Presidential Term',
+                                    text: 'Federal Spending & Revenue by President',
                                     color: '#ffffff'
                                 },
-                                legend: { display: false }
+                                legend: { 
+                                    display: true,
+                                    labels: {
+                                        color: '#ffffff'
+                                    }
+                                }
                             },
                             scales: {
                                 x: {
