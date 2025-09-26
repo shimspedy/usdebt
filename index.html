@@ -672,7 +672,19 @@
                     }
                 } catch (debtError) {
                     console.warn('❌ Treasury debt API failed:', debtError);
-                    console.log('⚠️  Debt will show "Loading from API..." until Treasury API succeeds');
+                    console.log('🔄 Falling back to most recent parent data...');
+                    
+                    // Get most recent historical debt data as fallback
+                    const parentData = getMostRecentParentData();
+                    if (parentData.debt) {
+                        liveData.currentDebt = parentData.debt;
+                        liveData.debtSource = 'Historical Data (Most Recent Parent Data)';
+                        console.log('✅ PARENT DEBT DATA LOADED:', {
+                            amount: liveData.currentDebt,
+                            formatted: '$' + (liveData.currentDebt / 1e12).toFixed(1) + 'T',
+                            source: liveData.debtSource
+                        });
+                    }
                 }
                 
                 // Get current fiscal year receipts and outlays from MTS API - DIRECT CALL
@@ -769,6 +781,17 @@
                     }
                 } catch (popError) {
                     console.warn('World Bank population API failed:', popError);
+                    console.log('🔄 Using most recent parent population data...');
+                    
+                    const parentData = getMostRecentParentData();
+                    if (parentData.population) {
+                        liveData.population = parentData.population;
+                        liveData.populationSource = 'Historical Parent Data (Census Trends)';
+                        console.log('✅ PARENT POPULATION DATA:', {
+                            population: liveData.population.toLocaleString(),
+                            source: liveData.populationSource
+                        });
+                    }
                 }
                 
                 // Fetch GDP from World Bank API
@@ -1403,12 +1426,21 @@
                 
                 console.log('✅ All statistics updated with validated data');
                 
-                // Update API status indicator in UI
+                // Update API status indicator in UI with parent data indication
                 const liveApiCount = Object.values(dataStatus).filter(status => status.includes('✅')).length;
                 const totalApis = Object.keys(dataStatus).length;
                 const statusColor = liveApiCount >= 3 ? '#22c55e' : liveApiCount >= 1 ? '#f59e0b' : '#ef4444';
+                
+                // Check if using parent/historical data
+                const usingParentData = (liveData.debtSource?.includes('Parent Data') || 
+                                       liveData.debtSource?.includes('Historical') ||
+                                       liveData.receiptsSource?.includes('Parent Data') ||
+                                       liveData.populationSource?.includes('Parent Data'));
+                
                 const statusText = liveApiCount === totalApis ? 
                     `✅ All ${totalApis} APIs Live - Real-time Data` : 
+                    usingParentData ?
+                    `📊 ${liveApiCount}/${totalApis} APIs Live + Most Recent Parent Data` :
                     `⚠️ ${liveApiCount}/${totalApis} APIs Live - Mixed Data`;
                 
                 document.getElementById('apiStatusIndicator').innerHTML = 
