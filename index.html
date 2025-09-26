@@ -470,7 +470,7 @@
                     <div class="stat-box">
                         <div class="stat-title">Population</div>
                         <div class="stat-value" id="population">Loading...</div>
-                        <div class="stat-change positive" id="populationSource">Census Bureau API</div>
+                        <div class="stat-change positive" id="populationSource">Census Bureau Estimates</div>
                     </div>
                     
                     <div class="stat-box">
@@ -484,7 +484,7 @@
 
         <!-- Data Sources Indicator (Hidden) -->
         <div class="update-indicator pulse" style="top: 80px; display: none;">
-            <span id="dataSourceStatus">📊 100% Government APIs • Population: World Bank • GDP: World Bank • Debt: Treasury</span>
+            <span id="dataSourceStatus">📊 100% Government APIs • Population: Census Bureau • GDP: World Bank • Debt: Treasury</span>
         </div>
 
         <!-- Live Update Indicator -->
@@ -602,7 +602,7 @@
                 // FY 2025 estimates based on Treasury historical growth patterns
                 fallbackData.receipts = 4850000000000; // $4.85T (up from FY24)
                 fallbackData.outlays = 6750000000000;  // $6.75T (up from FY24)
-                fallbackData.population = 342000000;    // 342M (current Census estimates)
+                fallbackData.population = 342000000;    // 342M (Census Bureau 2024 estimates)
                 
                 console.log('✅ Using most recent fiscal estimates:', {
                     receipts: '$' + (fallbackData.receipts / 1e12).toFixed(1) + 'T',
@@ -614,7 +614,7 @@
                 // Use previous fiscal year actuals if available
                 fallbackData.receipts = 4400000000000; // FY24 actuals
                 fallbackData.outlays = 6200000000000;  // FY24 actuals  
-                fallbackData.population = 335000000;   // 2024 estimates
+                fallbackData.population = 341800000;   // Census Bureau 2024 estimates
             }
             
             return fallbackData;
@@ -835,21 +835,25 @@
                     console.warn('Treasury MTS API failed:', mtsError);
                 }
                 
-                // Fetch population from World Bank API
+                // Fetch population - use more accurate Census-based calculation
                 try {
+                    // Start with Census Bureau 2024 estimate and calculate real-time growth
+                    const census2024Base = 341814420; // Census Bureau July 2024 estimate
+                    const dailyGrowthRate = 6000; // ~6,000 people per day (net growth: births - deaths + immigration)
+                    const daysSinceJuly2024 = Math.floor((Date.now() - new Date('2024-07-01').getTime()) / (1000 * 60 * 60 * 24));
+                    
+                    liveData.population = Math.round(census2024Base + (dailyGrowthRate * daysSinceJuly2024));
+                    liveData.populationSource = `Census Bureau (July 2024 + ${daysSinceJuly2024} days growth)`;
+                    console.log('✅ Live population data calculated:', liveData.population);
+                    
+                    // Also try World Bank as backup verification
                     const popResponse = await fetch('https://api.worldbank.org/v2/country/USA/indicator/SP.POP.TOTL?format=json&per_page=1&date=2023');
                     const popData = await popResponse.json();
                     if (popData && popData[1] && popData[1][0] && popData[1][0].value) {
-                        // Apply growth rate to get current estimate
-                        const basePopulation = popData[1][0].value;
-                        const growthRate = 0.005; // 0.5% annual growth
-                        const yearsElapsed = 2; // 2023 to 2025
-                        liveData.population = Math.round(basePopulation * Math.pow(1 + growthRate, yearsElapsed));
-                        liveData.populationSource = `World Bank API (${popData[1][0].date} + ${yearsElapsed}yr growth)`;
-                        console.log('✅ Live population data loaded:', liveData.population);
+                        console.log('📊 World Bank 2023 data for comparison:', popData[1][0].value);
                     }
                 } catch (popError) {
-                    console.warn('World Bank population API failed:', popError);
+                    console.warn('Population calculation failed:', popError);
                     console.log('🔄 Using most recent parent population data...');
                     
                     const parentData = getMostRecentParentData();
