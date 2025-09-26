@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>U.S. Fiscal Dashboard | Live Government Financial Data</title>
+<meta name="description" content="Real-time U.S. government financial data including national debt, federal receipts, outlays, and key economic indicators from official sources.">
+
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com"></script>
+
+<!-- Chart.js for data visualization -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.min.js"></script>
+
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;500;600;700&family=Source+Serif+4:opsz@8..60:wght@600;700&family=JetBrains+Mono:wght@600;700;800&display=swap" rel="stylesheet">
+
+<!-- Custom Styles -->
+<link rel="stylesheet" href="styles.css">
+
+<!-- Favicon -->
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2310b981'><circle cx='12' cy='12' r='9'/><path d='M12 6v12M6 12h12'/></svg>">
+</head>
+<body class="bg-gradient-to-br from-slate-50 to-slate-100 text-slate-900 font-ui antialiased">
+
+<!-- Header -->
+<header class="header-gradient sticky top-0 z-30 border-b border-slate-200/20 backdrop-blur-sm">
+  <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-4">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-4">
+        <div class="h-12 w-12 rounded-xl grid place-items-center bg-gradient-to-br from-emerald-400 to-emerald-600 shadow-lg">
+          <svg viewBox="0 0 24 24" class="h-7 w-7 text-white" fill="none" stroke="currentColor" stroke-width="2.5">
+            <circle cx="12" cy="12" r="9"></circle>
+            <path d="M12 6v12M6 12h12"></path>
+          </svg>
+        </div>
+        <div>
+          <h1 class="font-serif text-2xl font-bold tracking-tight text-white">U.S. Fiscal Dashboard</h1>
+          <p class="text-sm text-slate-300 mt-0.5">Live government financial data from official sources</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-4">
+        <div class="flex items-center gap-2">
+          <span id="statusDot" class="status-dot h-3 w-3 rounded-full bg-amber-400 shadow-lg"></span>
+          <span id="synced" class="text-sm text-slate-300 font-medium">initializing…</span>
+        </div>
+        <button id="refreshBtn" class="inline-flex items-center gap-2 rounded-lg bg-white/10 hover:bg-white/20 px-4 py-2 text-white text-sm font-semibold transition-all duration-200 border border-white/20 hover:border-white/30 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-2 focus:ring-offset-slate-800">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+          </svg>
+          Refresh Data
+        </button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- Status Banner -->
+<section class="bg-gradient-to-r from-emerald-50 via-emerald-50 to-teal-50 border-y border-emerald-200/50">
+  <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-3">
+    <div class="flex items-center justify-center gap-2 text-sm text-emerald-800">
+      <svg class="w-4 h-4 text-emerald-600" fill="currentColor" viewBox="0 0 20 20">
+        <path fill-rule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+      </svg>
+      <span class="font-medium">Official Data Sources:</span>
+      <span>Treasury FiscalData API (daily/monthly) • World Bank (annual) • Live interpolation between updates</span>
+    </div>
+  </div>
+</section>
+
+<!-- Main Content -->
+<main class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
+  <div class="space-y-8">
+    <!-- Debt Growth Chart -->
+    <section class="bg-white rounded-2xl shadow-lg border border-slate-200/50 overflow-hidden">
+      <div class="bg-gradient-to-r from-slate-50 to-slate-100 px-6 py-4 border-b border-slate-200/50">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-xl font-bold text-slate-900">U.S. National Debt Growth</h2>
+            <p class="text-sm text-slate-600 mt-1">Historical debt progression over the past 20 years</p>
+          </div>
+          <div class="flex items-center gap-2 text-sm text-slate-500">
+            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M3 3a1 1 0 000 2v8a2 2 0 002 2h2.586l-1.293 1.293a1 1 0 101.414 1.414L10 15.414l2.293 2.293a1 1 0 001.414-1.414L12.414 15H15a2 2 0 002-2V5a1 1 0 100-2H3zm11.707 4.707a1 1 0 00-1.414-1.414L10 9.586 8.707 8.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+            </svg>
+            <span>Treasury Data</span>
+          </div>
+        </div>
+      </div>
+      <div class="p-6">
+        <div class="relative h-80 bg-slate-50 rounded-lg border border-slate-200">
+          <canvas id="debtChart" width="800" height="320" class="w-full h-full"></canvas>
+          <div id="chartLoading" class="absolute inset-0 flex items-center justify-center text-slate-500 bg-slate-50 rounded-lg">
+            <div class="flex items-center gap-3">
+              <svg class="animate-spin w-6 h-6" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="m4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              <span>Loading historical debt data...</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Dashboard Grid -->
+    <section>
+      <div class="mb-6">
+        <h2 class="text-lg font-semibold text-slate-900 mb-2">Live Financial Indicators</h2>
+        <p class="text-sm text-slate-600">Real-time and derived metrics from official government sources</p>
+      </div>
+      <div id="grid" class="dashboard-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+    </section>
+
+    <!-- Methodology Section -->
+    <section class="methodology rounded-2xl p-6">
+      <div class="flex items-start gap-3 mb-4">
+        <div class="flex-shrink-0 w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center">
+          <svg class="w-5 h-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+          </svg>
+        </div>
+        <div>
+          <h2 class="text-base font-semibold text-slate-900 mb-2">Data Methodology</h2>
+          <div class="prose prose-sm text-slate-600 max-w-none">
+            <p>
+              <strong>Live Updates:</strong> Debt and cash balance use daily Treasury data; receipts/outlays use monthly Treasury statements; 
+              population & GDP use annual World Bank data. "Live" counters interpolate smoothly between the most recent observations 
+              using linear progression for levels and continuous compounding for growth series.
+            </p>
+            <p class="mt-3">
+              <strong>Derived Metrics:</strong> Per-citizen values and ratios are computed in real-time from the live base values, 
+              providing current estimates that update continuously between official data releases.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<!-- Footer -->
+<footer class="footer border-t border-slate-200/50 mt-12">
+  <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6">
+    <div class="flex flex-wrap items-center justify-between gap-4 text-sm text-slate-600">
+      <div class="flex items-center gap-4">
+        <span>&copy; <span id="yr"></span> U.S. Fiscal Dashboard</span>
+        <span class="text-slate-400">•</span>
+        <span>Public Data Demonstration</span>
+      </div>
+      <div class="flex items-center gap-4">
+        <span class="text-slate-500">Built with modern web technologies</span>
+        <a href="#" class="text-slate-600 hover:text-slate-900 transition-colors">About</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<!-- Application Scripts -->
+<script src="config.js"></script>
+<script src="utils.js"></script>
+<script src="data.js"></script>
+<script src="ui.js"></script>
+<script src="chart.js"></script>
+<script src="app.js"></script>
+
+</body>
+</html>
