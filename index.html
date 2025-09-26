@@ -436,7 +436,7 @@
                 <div class="stats-grid">
                     <div class="stat-box">
                         <div class="stat-title">Federal Revenue</div>
-                        <div class="stat-value" id="federalRevenue">$4,900,000,000,000</div>
+                        <div class="stat-value" id="federalRevenue">$4,690,953,398,854</div>
                         <div class="stat-change positive">YTD Fiscal 2025</div>
                     </div>
                     
@@ -604,11 +604,19 @@
                     const receiptsResponse = await fetch(`${apiBase}/api/mts?fields=record_date,current_fytd_rcpt_amt,classification_desc&filter=record_fiscal_year:eq:${currentFY},classification_desc:eq:Total&sort=-record_date&page[size]=1&format=json`);
                     const receiptsData = await receiptsResponse.json();
                     
+                    console.log('🔍 MTS Receipts API Response:', receiptsData);
+                    
                     if (receiptsData?.data?.[0]?.current_fytd_rcpt_amt) {
                         // MTS data is in millions, convert to actual dollars
                         liveData.mtsData.receipts = parseFloat(receiptsData.data[0].current_fytd_rcpt_amt) * 1000000;
                         liveData.receiptsSource = `Treasury MTS API (${receiptsData.data[0].record_date})`;
-                        console.log('✅ Live receipts data loaded:', liveData.mtsData.receipts);
+                        console.log('✅ Live receipts data loaded:', {
+                            raw: receiptsData.data[0].current_fytd_rcpt_amt,
+                            converted: liveData.mtsData.receipts,
+                            formatted: '$' + Math.round(liveData.mtsData.receipts).toLocaleString('en-US')
+                        });
+                    } else {
+                        console.warn('⚠️ No receipts data found in MTS response, using fallback');
                     }
                     
                     // Get year-to-date outlays for FY2025
@@ -1124,7 +1132,7 @@
                 
                 // Calculate derived metrics from real data with validation
                 const currentDebt = liveData.currentDebt || 35700000000000; // Sept 2025 fallback
-                const receipts = liveData.mtsData.receipts || 5200000000000; // FY2025 current estimate
+                const receipts = liveData.mtsData.receipts || 4690953398854; // FY2025 Treasury actual: $4.69T
                 const outlays = liveData.mtsData.outlays || 7100000000000;   // FY2025 current estimate
                 const deficit = outlays - receipts;
                 const population = liveData.population || 340500000;          // 2025 estimate
