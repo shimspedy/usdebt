@@ -434,15 +434,19 @@
                 const historicalResponse = await fetch('/data/historical-debt.json');
                 const historicalData = await historicalResponse.json();
                 
+                // Detect if running locally or on Netlify
+                const isLocal = window.location.hostname === 'localhost';
+                const apiBase = isLocal ? 'http://localhost:8000' : '';
+                
                 // Get current debt from Treasury API
-                const debtResponse = await fetch('/api/debt?fields=record_date,tot_pub_debt_out_amt&sort=-record_date&page[size]=2&format=json');
+                const debtResponse = await fetch(`${apiBase}/api/debt?fields=record_date,tot_pub_debt_out_amt&sort=-record_date&page[size]=2&format=json`);
                 const debtData = await debtResponse.json();
                 
                 // Get current MTS data for receipts/outlays
-                const receiptsResponse = await fetch('/api/mts?fields=record_date,current_month_gross_rcpt_amt,classification_desc&filter=record_type_cd:eq:SL,record_fiscal_year:eq:2025,classification_desc:eq:Year-to-Date&sort=-record_date&page[size]=2&format=json');
+                const receiptsResponse = await fetch(`${apiBase}/api/mts?fields=record_date,current_month_gross_rcpt_amt,classification_desc&filter=record_type_cd:eq:SL,record_fiscal_year:eq:2025,classification_desc:eq:Year-to-Date&sort=-record_date&page[size]=2&format=json`);
                 const receiptsData = await receiptsResponse.json();
                 
-                const outlaysResponse = await fetch('/api/mts?fields=record_date,current_month_gross_outly_amt,classification_desc&filter=record_type_cd:eq:SL,record_fiscal_year:eq:2025,classification_desc:eq:Year-to-Date&sort=-record_date&page[size]=2&format=json');
+                const outlaysResponse = await fetch(`${apiBase}/api/mts?fields=record_date,current_month_gross_outly_amt,classification_desc&filter=record_type_cd:eq:SL,record_fiscal_year:eq:2025,classification_desc:eq:Year-to-Date&sort=-record_date&page[size]=2&format=json`);
                 const outlaysData = await outlaysResponse.json();
                 
                 // Fetch population from multiple government sources
