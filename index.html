@@ -434,7 +434,7 @@
             <!-- Statistics Section -->
             <div class="stats-section">
                 <div id="dataSourceStatus" style="text-align: center; margin-bottom: 15px; padding: 10px; border-radius: 8px; background: rgba(0,0,0,0.3); font-size: 0.85rem;">
-                    <div id="apiStatusIndicator" style="color: #f59e0b;">🔄 Checking data sources...</div>
+                <!-- API status header removed per user request -->
                 </div>
                 <div class="stats-grid">
                     <div class="stat-box">
@@ -1544,25 +1544,7 @@
                 
                 console.log('✅ All statistics updated with validated data');
                 
-                // Update API status indicator in UI with parent data indication
-                const liveApiCount = Object.values(dataStatus).filter(status => status.includes('✅')).length;
-                const totalApis = Object.keys(dataStatus).length;
-                const statusColor = liveApiCount >= 3 ? '#22c55e' : liveApiCount >= 1 ? '#f59e0b' : '#ef4444';
-                
-                // Check if using parent/historical data
-                const usingParentData = (liveData.debtSource?.includes('Parent Data') || 
-                                       liveData.debtSource?.includes('Historical') ||
-                                       liveData.receiptsSource?.includes('Parent Data') ||
-                                       liveData.populationSource?.includes('Parent Data'));
-                
-                const statusText = liveApiCount === totalApis ? 
-                    `✅ All ${totalApis} APIs Live - Real-time Data` : 
-                    usingParentData ?
-                    `📊 ${liveApiCount}/${totalApis} APIs Live + Most Recent Parent Data` :
-                    `⚠️ ${liveApiCount}/${totalApis} APIs Live - Mixed Data`;
-                
-                document.getElementById('apiStatusIndicator').innerHTML = 
-                    `<span style="color: ${statusColor};">${statusText}</span>`;
+                // API status tracking and display removed per user request
                 
                 console.log('✅ All statistics and UI updated');
                 
