@@ -382,7 +382,7 @@
         <div class="main-grid">
             <!-- Primary Debt Display -->
             <div class="debt-display">
-                <div class="debt-amount" id="primaryDebt">$35,700,000,000,000</div>
+                <div class="debt-amount" id="primaryDebt">Loading...</div>
                 <div class="debt-label">NATIONAL DEBT OF THE UNITED STATES</div>
                 
                 <div class="debt-info">
@@ -1524,35 +1524,53 @@
 
         // Initialize everything - Real-time debt clock initialization
         document.addEventListener('DOMContentLoaded', async function() {
-            console.log('🚀 Initializing US Debt Clock - Parent Data + API Version');
+            console.log('🚀 Initializing US Debt Clock - 100% API/Parent Data System');
             
-            // FIRST: Initialize with parent data immediately
+            // FIRST: Initialize with parent data immediately via JavaScript
             const parentData = getMostRecentParentData();
             if (parentData.debt) {
                 liveData.currentDebt = parentData.debt;
-                liveData.debtSource = 'Historical Parent Data (Immediate Load)';
+                liveData.debtSource = 'Historical Parent Data (API Fallback)';
+                // Update UI immediately with parent data
+                document.getElementById('primaryDebt').textContent = 
+                    '$' + Math.round(parentData.debt).toLocaleString('en-US');
             }
             if (parentData.receipts) {
                 liveData.mtsData.receipts = parentData.receipts;
-                liveData.receiptsSource = 'Historical Parent Data (Immediate Load)';
+                liveData.receiptsSource = 'Historical Parent Data (API Fallback)';
+                // Update UI immediately with parent data
+                document.getElementById('federalRevenue').textContent = 
+                    '$' + Math.round(parentData.receipts).toLocaleString('en-US');
             }
             if (parentData.outlays) {
                 liveData.mtsData.outlays = parentData.outlays;
-                liveData.outlaysSource = 'Historical Parent Data (Immediate Load)';
+                liveData.outlaysSource = 'Historical Parent Data (API Fallback)';
+                // Update UI immediately with parent data
+                document.getElementById('federalSpending').textContent = 
+                    '$' + Math.round(parentData.outlays).toLocaleString('en-US');
+                    
+                // Calculate and display deficit from parent data
+                if (parentData.receipts && parentData.outlays) {
+                    const deficit = parentData.outlays - parentData.receipts;
+                    document.getElementById('budgetDeficit').textContent = 
+                        (deficit > 0 ? '-$' : '+$') + Math.abs(Math.round(deficit)).toLocaleString('en-US');
+                }
             }
             if (parentData.population) {
                 liveData.population = parentData.population;
-                liveData.populationSource = 'Historical Parent Data (Immediate Load)';
+                liveData.populationSource = 'Historical Parent Data (API Fallback)';
             }
             
-            console.log('✅ Parent data loaded immediately:', {
+            console.log('✅ Parent data loaded and displayed via JavaScript:', {
                 debt: '$' + (liveData.currentDebt / 1e12).toFixed(1) + 'T',
                 revenue: '$' + (liveData.mtsData.receipts / 1e12).toFixed(1) + 'T',
                 spending: '$' + (liveData.mtsData.outlays / 1e12).toFixed(1) + 'T'
             });
             
-            // SECOND: Try to get fresh API data (but don't wait for it)
-            fetchLiveData().catch(err => console.log('API fetch in progress:', err));
+            // SECOND: Try to get fresh API data and update if successful
+            console.log('🌐 Attempting to fetch live API data...');
+            await fetchLiveData();
+            await updateLiveStatistics(); // This will update UI if APIs succeed
             
             // Initialize chart with real data
             setTimeout(async () => {
