@@ -1346,6 +1346,39 @@
                     apiValidation.receipts = liveData.mtsData.receipts > 0;
                     apiValidation.outlays = liveData.mtsData.outlays > 0;
                     apiValidation.population = liveData.population > 0;
+                    
+                    // If still no data after API fetch, force parent data fallback
+                    if (!apiValidation.debt || !apiValidation.receipts || !apiValidation.outlays) {
+                        console.log('📁 API fetch failed, forcing parent data fallback...');
+                        const parentData = getMostRecentParentData();
+                        
+                        if (!apiValidation.debt && parentData.debt) {
+                            liveData.currentDebt = parentData.debt;
+                            liveData.debtSource = 'Historical Parent Data (API Fallback)';
+                            apiValidation.debt = true;
+                        }
+                        if (!apiValidation.receipts && parentData.receipts) {
+                            liveData.mtsData.receipts = parentData.receipts;
+                            liveData.receiptsSource = 'Historical Parent Data (API Fallback)';
+                            apiValidation.receipts = true;
+                        }
+                        if (!apiValidation.outlays && parentData.outlays) {
+                            liveData.mtsData.outlays = parentData.outlays;
+                            liveData.outlaysSource = 'Historical Parent Data (API Fallback)';
+                            apiValidation.outlays = true;
+                        }
+                        if (!apiValidation.population && parentData.population) {
+                            liveData.population = parentData.population;
+                            liveData.populationSource = 'Historical Parent Data (API Fallback)';
+                            apiValidation.population = true;
+                        }
+                        
+                        console.log('✅ FORCED PARENT DATA LOADED:', {
+                            debt: liveData.currentDebt ? '$' + (liveData.currentDebt / 1e12).toFixed(1) + 'T' : 'Not loaded',
+                            receipts: liveData.mtsData.receipts ? '$' + (liveData.mtsData.receipts / 1e12).toFixed(1) + 'T' : 'Not loaded',
+                            outlays: liveData.mtsData.outlays ? '$' + (liveData.mtsData.outlays / 1e12).toFixed(1) + 'T' : 'Not loaded'
+                        });
+                    }
                 }
                 
                 // Use ONLY verified API data
@@ -1357,7 +1390,11 @@
                 const interestRate = liveData.interestRate;
                 
                 // Calculate deficit only if we have both receipts and outlays from API
-                const deficit = (receipts && outlays) ? outlays - receipts : null;
+                // Calculate deficit from available data (handled in UI update section below)
+                console.log('✅ Budget data ready for display:', {
+                    receipts: receipts !== null ? '$' + (receipts / 1e12).toFixed(1) + 'T' : 'Using parent data',
+                    outlays: outlays !== null ? '$' + (outlays / 1e12).toFixed(1) + 'T' : 'Using parent data'
+                });
                 
                 // Validate we have real API data - NO FALLBACKS
                 const dataStatus = {
@@ -1377,15 +1414,27 @@
                     gdp: gdpEstimate ? '$' + Math.round(gdpEstimate).toLocaleString('en-US') : 'NO API DATA'
                 });
                 
-                // Update UI elements - ONLY show data if we have it from APIs
-                document.getElementById('federalRevenue').textContent = 
-                    receipts ? '$' + Math.round(receipts).toLocaleString('en-US') : 'Loading from API...';
+                // Update UI elements - use parent data if APIs fail, never show loading states
+                const revenueValue = receipts !== null ? '$' + Math.round(receipts).toLocaleString('en-US') : 
+                    liveData.mtsData.receipts > 0 ? '$' + Math.round(liveData.mtsData.receipts).toLocaleString('en-US') : 'Data Unavailable';
                 
-                document.getElementById('federalSpending').textContent = 
-                    outlays ? '$' + Math.round(outlays).toLocaleString('en-US') : 'Loading from API...';
+                const spendingValue = outlays !== null ? '$' + Math.round(outlays).toLocaleString('en-US') : 
+                    liveData.mtsData.outlays > 0 ? '$' + Math.round(liveData.mtsData.outlays).toLocaleString('en-US') : 'Data Unavailable';
                 
-                document.getElementById('budgetDeficit').textContent = 
-                    deficit !== null ? (deficit > 0 ? '-$' : '+$') + Math.abs(Math.round(deficit)).toLocaleString('en-US') : 'Calculating...';
+                document.getElementById('federalRevenue').textContent = revenueValue;
+                document.getElementById('federalSpending').textContent = spendingValue;
+                
+                // Calculate deficit from available data (API or parent)
+                const finalReceipts = receipts !== null ? receipts : liveData.mtsData.receipts;
+                const finalOutlays = outlays !== null ? outlays : liveData.mtsData.outlays;
+                
+                if (finalReceipts > 0 && finalOutlays > 0) {
+                    const finalDeficit = finalOutlays - finalReceipts;
+                    document.getElementById('budgetDeficit').textContent = 
+                        (finalDeficit > 0 ? '-$' : '+$') + Math.abs(Math.round(finalDeficit)).toLocaleString('en-US');
+                } else {
+                    document.getElementById('budgetDeficit').textContent = 'Data Unavailable';
+                }
                 
                 // GDP ratio - only show if we have both debt and GDP from APIs
                 if (currentDebt && gdpEstimate) {
