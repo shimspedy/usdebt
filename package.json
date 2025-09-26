@@ -1,21 +1,20 @@
 {
-  "name": "us-fiscal-dashboard",
+  "name": "us-debt-clock",
   "version": "1.0.0",
-  "description": "Real-time U.S. government financial data dashboard with live Treasury API integration",
+  "description": "Real-time U.S. National Debt Clock with live Treasury API data",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "node server.js",
-    "production": "NODE_ENV=production node server.js"
+    "start": "NODE_ENV=production node server.js",
+    "dev": "node server.js"
   },
   "keywords": [
-    "treasury",
-    "fiscal",
+    "us-debt-clock",
+    "national-debt", 
+    "treasury-api",
+    "fiscal-data",
     "government",
-    "debt",
-    "dashboard",
-    "api",
-    "financial"
+    "real-time",
+    "dashboard"
   ],
   "author": "Your Name",
   "license": "MIT",

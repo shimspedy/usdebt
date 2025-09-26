@@ -31,7 +31,6 @@ const TREASURY_ENDPOINTS = {
 // Fetch data from Treasury API
 function fetchTreasuryAPI(apiUrl, query, callback) {
   const fullUrl = `${apiUrl}?${query}`;
-  console.log(`📡 Proxying: ${fullUrl}`);
   
   https.get(fullUrl, (res) => {
     let data = '';
@@ -43,15 +42,12 @@ function fetchTreasuryAPI(apiUrl, query, callback) {
     res.on('end', () => {
       try {
         const jsonData = JSON.parse(data);
-        console.log(`✅ Treasury API success: ${jsonData.data?.length || 0} records`);
         callback(null, jsonData);
       } catch (error) {
-        console.error(`❌ JSON parse error: ${error.message}`);
         callback(error, null);
       }
     });
   }).on('error', (error) => {
-    console.error(`❌ Treasury API error: ${error.message}`);
     callback(error, null);
   });
 }
@@ -86,8 +82,6 @@ const server = http.createServer((req, res) => {
   const parsedUrl = url.parse(req.url, true);
   const pathname = parsedUrl.pathname;
   const query = parsedUrl.search?.slice(1) || '';
-
-  console.log(`📥 ${req.method} ${pathname}${query ? '?' + query : ''}`);
 
   // Handle preflight OPTIONS requests
   if (req.method === 'OPTIONS') {
@@ -138,16 +132,11 @@ const server = http.createServer((req, res) => {
 
 server.listen(PORT, () => {
   console.log(`🚀 Production server running on port ${PORT}`);
-  console.log(`📊 Treasury API proxy endpoints:`);
-  Object.keys(TREASURY_ENDPOINTS).forEach(endpoint => {
-    console.log(`   ${endpoint} -> Treasury ${endpoint.replace('/api/', '').toUpperCase()}`);
-  });
   console.log(`🌐 Access your dashboard at: http://localhost:${PORT}`);
 });
 
 // Graceful shutdown
 process.on('SIGTERM', () => {
-  console.log('📴 Shutting down server gracefully');
   server.close(() => {
     process.exit(0);
   });
