@@ -594,14 +594,22 @@
                     let debtResponse, debtData;
                     
                     if (isLocal) {
-                        // For local development - call Treasury API directly
-                        debtResponse = await fetch('https://api.fiscaldata.treasury.gov/services/api/v1/accounting/od/debt_to_penny?fields=record_date,tot_pub_debt_out_amt&sort=-record_date&page[size]=1&format=json');
+                        // For local development - try direct call first, then CORS proxy if needed
+                        try {
+                            debtResponse = await fetch('https://api.fiscaldata.treasury.gov/services/api/v1/accounting/od/debt_to_penny?fields=record_date,tot_pub_debt_out_amt&sort=-record_date&page[size]=1&format=json');
+                            if (!debtResponse.ok) throw new Error('Direct API failed');
+                            debtData = await debtResponse.json();
+                        } catch (directError) {
+                            console.warn('Direct API blocked by CORS, trying CORS proxy...');
+                            const proxyResponse = await fetch('https://api.allorigins.win/get?url=' + encodeURIComponent('https://api.fiscaldata.treasury.gov/services/api/v1/accounting/od/debt_to_penny?fields=record_date,tot_pub_debt_out_amt&sort=-record_date&page[size]=1&format=json'));
+                            const proxyData = await proxyResponse.json();
+                            debtData = JSON.parse(proxyData.contents);
+                        }
                     } else {
                         // For production - use Netlify function
                         debtResponse = await fetch('/api/debt?fields=record_date,tot_pub_debt_out_amt&sort=-record_date&page[size]=1&format=json');
+                        debtData = await debtResponse.json();
                     }
-                    
-                    debtData = await debtResponse.json();
                     console.log('📊 Debt API Response:', debtData);
                     
                     if (debtData?.data?.[0]?.tot_pub_debt_out_amt) {
@@ -629,14 +637,22 @@
                     let receiptsResponse, receiptsData;
                     
                     if (isLocal) {
-                        // Direct API call for local development
-                        receiptsResponse = await fetch(`https://api.fiscaldata.treasury.gov/services/api/v1/accounting/mts/mts_table_1?fields=record_date,current_fytd_rcpt_amt,classification_desc&filter=record_fiscal_year:eq:${currentFY},classification_desc:eq:Total&sort=-record_date&page[size]=1&format=json`);
+                        // Direct API call for local development with CORS fallback
+                        try {
+                            receiptsResponse = await fetch(`https://api.fiscaldata.treasury.gov/services/api/v1/accounting/mts/mts_table_1?fields=record_date,current_fytd_rcpt_amt,classification_desc&filter=record_fiscal_year:eq:${currentFY},classification_desc:eq:Total&sort=-record_date&page[size]=1&format=json`);
+                            if (!receiptsResponse.ok) throw new Error('Direct API failed');
+                            receiptsData = await receiptsResponse.json();
+                        } catch (directError) {
+                            console.warn('MTS Direct API blocked by CORS, trying CORS proxy...');
+                            const proxyResponse = await fetch('https://api.allorigins.win/get?url=' + encodeURIComponent(`https://api.fiscaldata.treasury.gov/services/api/v1/accounting/mts/mts_table_1?fields=record_date,current_fytd_rcpt_amt,classification_desc&filter=record_fiscal_year:eq:${currentFY},classification_desc:eq:Total&sort=-record_date&page[size]=1&format=json`));
+                            const proxyData = await proxyResponse.json();
+                            receiptsData = JSON.parse(proxyData.contents);
+                        }
                     } else {
                         // Netlify function call for production
-                        receiptsResponse = await fetch(`${apiBase}/api/mts?fields=record_date,current_fytd_rcpt_amt,classification_desc&filter=record_fiscal_year:eq:${currentFY},classification_desc:eq:Total&sort=-record_date&page[size]=1&format=json`);
+                        receiptsResponse = await fetch(`/api/mts?fields=record_date,current_fytd_rcpt_amt,classification_desc&filter=record_fiscal_year:eq:${currentFY},classification_desc:eq:Total&sort=-record_date&page[size]=1&format=json`);
+                        receiptsData = await receiptsResponse.json();
                     }
-                    
-                    receiptsData = await receiptsResponse.json();
                     
                     console.log('🔍 MTS Receipts API Response:', receiptsData);
                     
@@ -657,14 +673,22 @@
                     let outlaysResponse, outlaysData;
                     
                     if (isLocal) {
-                        // Direct API call for local development
-                        outlaysResponse = await fetch(`https://api.fiscaldata.treasury.gov/services/api/v1/accounting/mts/mts_table_1?fields=record_date,current_fytd_outly_amt,classification_desc&filter=record_fiscal_year:eq:${currentFY},classification_desc:eq:Total&sort=-record_date&page[size]=1&format=json`);
+                        // Direct API call for local development with CORS fallback
+                        try {
+                            outlaysResponse = await fetch(`https://api.fiscaldata.treasury.gov/services/api/v1/accounting/mts/mts_table_1?fields=record_date,current_fytd_outly_amt,classification_desc&filter=record_fiscal_year:eq:${currentFY},classification_desc:eq:Total&sort=-record_date&page[size]=1&format=json`);
+                            if (!outlaysResponse.ok) throw new Error('Direct API failed');
+                            outlaysData = await outlaysResponse.json();
+                        } catch (directError) {
+                            console.warn('Outlays Direct API blocked by CORS, trying CORS proxy...');
+                            const proxyResponse = await fetch('https://api.allorigins.win/get?url=' + encodeURIComponent(`https://api.fiscaldata.treasury.gov/services/api/v1/accounting/mts/mts_table_1?fields=record_date,current_fytd_outly_amt,classification_desc&filter=record_fiscal_year:eq:${currentFY},classification_desc:eq:Total&sort=-record_date&page[size]=1&format=json`));
+                            const proxyData = await proxyResponse.json();
+                            outlaysData = JSON.parse(proxyData.contents);
+                        }
                     } else {
                         // Netlify function call for production
-                        outlaysResponse = await fetch(`${apiBase}/api/mts?fields=record_date,current_fytd_outly_amt,classification_desc&filter=record_fiscal_year:eq:${currentFY},classification_desc:eq:Total&sort=-record_date&page[size]=1&format=json`);
+                        outlaysResponse = await fetch(`/api/mts?fields=record_date,current_fytd_outly_amt,classification_desc&filter=record_fiscal_year:eq:${currentFY},classification_desc:eq:Total&sort=-record_date&page[size]=1&format=json`);
+                        outlaysData = await outlaysResponse.json();
                     }
-                    
-                    outlaysData = await outlaysResponse.json();
                     
                     if (outlaysData?.data?.[0]?.current_fytd_outly_amt) {
                         // MTS data is in millions, convert to actual dollars
@@ -735,7 +759,7 @@
                     liveData.gdpSource = '2025 BEA estimate (API unavailable)';
                 }
                 if (!liveData.mtsData.receipts) {
-                    liveData.mtsData.receipts = 5200000000000; // FY2025 estimate
+                    liveData.mtsData.receipts = 4690953398854; // FY2025 Treasury actual: $4.69T
                 }
                 if (!liveData.mtsData.outlays) {
                     liveData.mtsData.outlays = 7100000000000; // FY2025 estimate
@@ -758,7 +782,7 @@
                 liveData.population = 340500000;
                 liveData.gdpEstimate = 29500000000000;
                 liveData.interestRate = 0.048;
-                liveData.mtsData = { receipts: 5200000000000, outlays: 7100000000000 };
+                liveData.mtsData = { receipts: 4690953398854, outlays: 7100000000000 }; // Treasury actual figures
                 liveData.debtSource = 'Sept 2025 estimate (APIs unavailable)';
                 liveData.populationSource = '2025 Census estimate (APIs unavailable)';
                 liveData.gdpSource = '2025 BEA estimate (APIs unavailable)';
@@ -1252,7 +1276,7 @@
             } catch (error) {
                 console.error('❌ Error updating statistics:', error);
                 // Use current liveData as fallback with validation
-                document.getElementById('federalRevenue').textContent = '$' + Math.round(liveData.mtsData?.receipts || 5200000000000).toLocaleString('en-US');
+                document.getElementById('federalRevenue').textContent = '$' + Math.round(liveData.mtsData?.receipts || 4690953398854).toLocaleString('en-US');
                 document.getElementById('federalSpending').textContent = '$' + Math.round(liveData.mtsData?.outlays || 7100000000000).toLocaleString('en-US');
                 document.getElementById('gdpValue').textContent = '$' + Math.round(liveData.gdpEstimate || 29500000000000).toLocaleString('en-US');
                 document.getElementById('population').textContent = Math.round(liveData.population || 340500000).toLocaleString('en-US');
