@@ -80,8 +80,8 @@
 
         .main-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            grid-template-rows: auto 1fr;
+            grid-template-columns: 1fr;
+            grid-template-rows: auto auto auto auto;
             gap: 20px;
             flex-grow: 1;
             min-height: 70vh;
@@ -266,6 +266,21 @@
             }
         }
 
+        @media (min-width: 1200px) {
+            .main-grid {
+                grid-template-columns: 1fr 1fr;
+                grid-template-rows: auto auto auto;
+            }
+            
+            .debt-display {
+                grid-column: 1 / -1;
+            }
+            
+            .stats-section {
+                grid-column: 1 / -1;
+            }
+        }
+
         /* Loading animation */
         .loading {
             display: inline-block;
@@ -350,6 +365,19 @@
                 </div>
             </div>
 
+            <!-- Presidential Spending Chart Section -->
+            <div class="chart-section">
+                <div class="chart-title">💰 FEDERAL SPENDING BY PRESIDENT (20 Years)</div>
+                <div style="text-align: center; margin-bottom: 15px; font-size: 0.9rem;">
+                    <span style="color: #dc2626; font-weight: bold;">🔴 Republican</span>
+                    <span style="margin: 0 20px;">•</span>
+                    <span style="color: #3b82f6; font-weight: bold;">🔵 Democrat</span>
+                </div>
+                <div class="chart-container">
+                    <canvas id="spendingChart"></canvas>
+                </div>
+            </div>
+
             <!-- Statistics Section -->
             <div class="stats-section">
                 <div class="stats-grid">
@@ -410,6 +438,31 @@
     </div>
 
     <script>
+        // Presidential spending data (in trillions) with party colors
+        const presidentialSpending = [
+            { year: 2005, president: "Bush (R)", spending: 2.47, party: "R" },
+            { year: 2006, president: "Bush (R)", spending: 2.66, party: "R" },
+            { year: 2007, president: "Bush (R)", spending: 2.73, party: "R" },
+            { year: 2008, president: "Bush (R)", spending: 2.98, party: "R" },
+            { year: 2009, president: "Obama (D)", spending: 3.52, party: "D" },
+            { year: 2010, president: "Obama (D)", spending: 3.46, party: "D" },
+            { year: 2011, president: "Obama (D)", spending: 3.60, party: "D" },
+            { year: 2012, president: "Obama (D)", spending: 3.54, party: "D" },
+            { year: 2013, president: "Obama (D)", spending: 3.45, party: "D" },
+            { year: 2014, president: "Obama (D)", spending: 3.51, party: "D" },
+            { year: 2015, president: "Obama (D)", spending: 3.69, party: "D" },
+            { year: 2016, president: "Obama (D)", spending: 3.85, party: "D" },
+            { year: 2017, president: "Trump (R)", spending: 3.98, party: "R" },
+            { year: 2018, president: "Trump (R)", spending: 4.11, party: "R" },
+            { year: 2019, president: "Trump (R)", spending: 4.45, party: "R" },
+            { year: 2020, president: "Trump (R)", spending: 6.55, party: "R" },
+            { year: 2021, president: "Biden (D)", spending: 6.82, party: "D" },
+            { year: 2022, president: "Biden (D)", spending: 6.27, party: "D" },
+            { year: 2023, president: "Biden (D)", spending: 6.13, party: "D" },
+            { year: 2024, president: "Biden (D)", spending: 6.75, party: "D" },
+            { year: 2025, president: "Biden (D)", spending: 7.10, party: "D" }
+        ];
+
         // Live data management - 100% API sourced
         let liveData = {
             currentDebt: 35700000000000, // Updated Sept 2025 estimate: ~$35.7 trillion
@@ -727,6 +780,138 @@
                     });
                 }
             }
+        }
+
+        // Initialize Presidential Spending Chart
+        async function initializeSpendingChart() {
+            const ctx = document.getElementById('spendingChart');
+            if (!ctx) return;
+            
+            try {
+                // Create color array based on political party
+                const backgroundColors = presidentialSpending.map(item => 
+                    item.party === 'R' ? 'rgba(220, 38, 38, 0.7)' : 'rgba(59, 130, 246, 0.7)'
+                );
+                const borderColors = presidentialSpending.map(item => 
+                    item.party === 'R' ? '#dc2626' : '#3b82f6'
+                );
+                
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: presidentialSpending.map(d => d.year),
+                        datasets: [{
+                            label: 'Federal Spending (Trillions)',
+                            data: presidentialSpending.map(d => d.spending),
+                            backgroundColor: backgroundColors,
+                            borderColor: borderColors,
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: 'Federal Spending by President & Party (2005-2025)',
+                                color: '#ffffff',
+                                font: { size: 16, weight: 'bold' }
+                            },
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    title: function(context) {
+                                        const dataIndex = context[0].dataIndex;
+                                        return presidentialSpending[dataIndex].president;
+                                    },
+                                    label: function(context) {
+                                        return `Spending: $${context.parsed.y.toFixed(2)}T`;
+                                    },
+                                    afterLabel: function(context) {
+                                        const dataIndex = context.dataIndex;
+                                        const party = presidentialSpending[dataIndex].party === 'R' ? 'Republican' : 'Democrat';
+                                        return `Party: ${party}`;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                ticks: {
+                                    color: '#ffffff',
+                                    maxRotation: 45,
+                                    minRotation: 45
+                                },
+                                grid: {
+                                    color: 'rgba(255, 255, 255, 0.1)'
+                                }
+                            },
+                            y: {
+                                ticks: {
+                                    color: '#ffffff',
+                                    callback: function(value) {
+                                        return '$' + value.toFixed(1) + 'T';
+                                    }
+                                },
+                                grid: {
+                                    color: 'rgba(255, 255, 255, 0.1)'
+                                },
+                                title: {
+                                    display: true,
+                                    text: 'Federal Spending (Trillions)',
+                                    color: '#ffffff'
+                                }
+                            }
+                        }
+                    }
+                });
+                
+            } catch (error) {
+                // Production fallback - simple chart
+                if (ctx.getContext) {
+                    new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: ['2005-2008', '2009-2016', '2017-2020', '2021-2025'],
+                            datasets: [{
+                                label: 'Avg Spending (Trillions)',
+                                data: [2.71, 3.58, 4.77, 6.68],
+                                backgroundColor: ['#dc2626', '#3b82f6', '#dc2626', '#3b82f6'],
+                                borderColor: ['#dc2626', '#3b82f6', '#dc2626', '#3b82f6'],
+                                borderWidth: 2
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            plugins: {
+                                title: {
+                                    display: true,
+                                    text: 'Federal Spending by Presidential Term',
+                                    color: '#ffffff'
+                                },
+                                legend: { display: false }
+                            },
+                            scales: {
+                                x: {
+                                    ticks: { color: '#ffffff' },
+                                    grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                                },
+                                y: {
+                                    ticks: { 
+                                        color: '#ffffff',
+                                        callback: function(value) {
+                                            return '$' + value.toFixed(1) + 'T';
+                                        }
+                                    },
+                                    grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                                }
+                            }
+                        }
+                    });
+                }
+            }
         }        // Animate numbers function
         function animateNumber(element, target, duration = 2000, prefix = '$', suffix = '') {
             const start = parseFloat(element.textContent.replace(/[^0-9.-]+/g, '')) || 0;
@@ -881,6 +1066,7 @@
             setTimeout(async () => {
                 if (typeof Chart !== 'undefined') {
                     await initializeChart();
+                    await initializeSpendingChart();
                 }
             }, 500);
             
