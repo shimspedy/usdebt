@@ -463,6 +463,31 @@
             { year: 2025, president: "Biden (D)", spending: 7.10, party: "D" }
         ];
 
+        // Federal revenue data (in trillions) for 20 years
+        const federalRevenue = [
+            { year: 2005, revenue: 2.15 },
+            { year: 2006, revenue: 2.41 },
+            { year: 2007, revenue: 2.57 },
+            { year: 2008, revenue: 2.52 },
+            { year: 2009, revenue: 2.10 },
+            { year: 2010, revenue: 2.16 },
+            { year: 2011, revenue: 2.30 },
+            { year: 2012, revenue: 2.45 },
+            { year: 2013, revenue: 2.77 },
+            { year: 2014, revenue: 3.02 },
+            { year: 2015, revenue: 3.25 },
+            { year: 2016, revenue: 3.27 },
+            { year: 2017, revenue: 3.32 },
+            { year: 2018, revenue: 3.33 },
+            { year: 2019, revenue: 3.46 },
+            { year: 2020, revenue: 3.42 },
+            { year: 2021, revenue: 4.05 },
+            { year: 2022, revenue: 4.90 },
+            { year: 2023, revenue: 4.44 },
+            { year: 2024, revenue: 4.92 },
+            { year: 2025, revenue: 5.20 }
+        ];
+
         // Live data management - 100% API sourced
         let liveData = {
             currentDebt: 35700000000000, // Updated Sept 2025 estimate: ~$35.7 trillion
@@ -640,7 +665,7 @@
                             labels: labels,
                             datasets: [
                                 {
-                                    label: 'Total Debt (Trillions)',
+                                    label: 'National Debt ($T)',
                                     data: totalDebt,
                                     borderColor: '#ff4757',
                                     backgroundColor: 'rgba(255, 71, 87, 0.1)',
@@ -649,7 +674,16 @@
                                     yAxisID: 'y'
                                 },
                                 {
-                                    label: 'Annual Increase (Billions)',
+                                    label: 'Federal Revenue ($T)',
+                                    data: federalRevenue.map(d => d.revenue),
+                                    borderColor: '#16a34a',
+                                    backgroundColor: 'rgba(22, 163, 74, 0.1)',
+                                    fill: false,
+                                    tension: 0.2,
+                                    yAxisID: 'y'
+                                },
+                                {
+                                    label: 'Annual Increase ($B)',
                                     data: annualIncrease,
                                     borderColor: '#ffa502',
                                     backgroundColor: 'rgba(255, 165, 2, 0.1)',
@@ -664,7 +698,7 @@
                             plugins: {
                                 title: {
                                     display: true,
-                                    text: 'US National Debt Growth: 20-Year History (2005-2025)',
+                                    text: 'DEBT & REVENUE TRAJECTORY (20 Years: 2005-2025)',
                                     color: '#ffffff',
                                     font: { size: 16, weight: 'bold' }
                                 },
@@ -701,7 +735,7 @@
                                     },
                                     title: {
                                         display: true,
-                                        text: 'Total Debt (Trillions)',
+                                        text: 'Debt & Revenue ($T)',
                                         color: '#ff4757'
                                     }
                                 },
@@ -721,7 +755,7 @@
                                     },
                                     title: {
                                         display: true,
-                                        text: 'Annual Increase (Billions)',
+                                        text: 'Annual Increase ($B)',
                                         color: '#ffa502'
                                     }
                                 }
@@ -737,11 +771,19 @@
                         data: {
                             labels: ['2005', '2006', '2007', '2008', '2009', '2010', '2011', '2012', '2013', '2014', '2015', '2016', '2017', '2018', '2019', '2020', '2021', '2022', '2023', '2024', '2025'],
                             datasets: [{
-                                label: 'Total Debt (Trillions)',
+                                label: 'National Debt ($T)',
                                 data: [7.9, 8.5, 9.0, 10.7, 12.3, 14.0, 15.2, 16.4, 17.4, 18.1, 18.9, 20.0, 20.5, 22.0, 23.2, 26.9, 29.6, 31.4, 34.0, 35.0, 35.7],
                                 borderColor: '#ff4757',
                                 backgroundColor: 'rgba(255, 71, 87, 0.1)',
-                                fill: true
+                                fill: true,
+                                tension: 0.2
+                            }, {
+                                label: 'Federal Revenue ($T)',
+                                data: [2.15, 2.41, 2.57, 2.52, 2.10, 2.16, 2.30, 2.45, 2.77, 3.02, 3.25, 3.27, 3.32, 3.33, 3.46, 3.42, 4.05, 4.90, 4.44, 4.92, 5.20],
+                                borderColor: '#16a34a',
+                                backgroundColor: 'rgba(22, 163, 74, 0.1)',
+                                fill: false,
+                                tension: 0.2
                             }]
                         },
                         options: {
@@ -749,7 +791,7 @@
                             plugins: {
                                 title: {
                                     display: true,
-                                    text: 'US National Debt Growth: 20-Year History (2005-2025)',
+                                    text: 'DEBT & REVENUE TRAJECTORY (20 Years: 2005-2025)',
                                     color: '#ffffff',
                                     font: { size: 16, weight: 'bold' }
                                 },
@@ -768,12 +810,17 @@
                                 },
                                 y: {
                                     ticks: { 
-                                        color: '#ff4757',
+                                        color: '#ffffff',
                                         callback: function(value) {
                                             return '$' + value.toFixed(1) + 'T';
                                         }
                                     },
-                                    grid: { color: 'rgba(255, 71, 87, 0.2)' }
+                                    grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                                    title: {
+                                        display: true,
+                                        text: 'Amount (Trillions $)',
+                                        color: '#ffffff'
+                                    }
                                 }
                             }
                         }
