@@ -14,50 +14,71 @@ class DebtChart {
    * Initialize and render the debt growth chart
    */
   async init() {
-    console.log('DebtChart: Starting initialization...');
+    console.log('🚀 DebtChart: Starting initialization...');
     
     try {
-      // Check if Chart.js is available
+      // Check Chart.js availability
       if (typeof Chart === 'undefined') {
-        console.error('DebtChart: Chart.js library not loaded');
-        this.showError();
-        return;
+        throw new Error('Chart.js library not loaded');
       }
       
-      console.log('DebtChart: Chart.js version:', Chart.version);
+      console.log('✅ DebtChart: Chart.js version:', Chart.version);
       
       const canvas = document.getElementById(this.canvasId);
       const loadingElement = document.getElementById('chartLoading');
       
       if (!canvas) {
-        console.error('DebtChart: Chart canvas not found:', this.canvasId);
+        console.error('❌ DebtChart: Chart canvas not found:', this.canvasId);
         this.showError();
         return;
       }
       
-      console.log('DebtChart: Found canvas element');
+      console.log('✅ DebtChart: Found canvas element');
 
       // Show loading state
       canvas.style.display = 'none';
       if (loadingElement) {
         loadingElement.style.display = 'flex';
-        console.log('DebtChart: Showing loading state');
+        console.log('✅ DebtChart: Showing loading state');
       }
 
-      // Try to fetch real historical debt data
+            // REAL CHART: Try to load local JSON data, fallback to test data
+      console.log('🧪 DebtChart: Attempting to load local data...');
+      
+      // Fallback test data
+      const testData = [
+        { year: 2020, debt: 27000000000000 },
+        { year: 2021, debt: 29000000000000 },
+        { year: 2022, debt: 31000000000000 },
+        { year: 2023, debt: 34000000000000 },
+        { year: 2024, debt: 36000000000000 }
+      ];
+      
       let debtData;
+      
       try {
-        console.log('DebtChart: Fetching real historical debt data...');
-        debtData = await this.fetchHistoricalDebtData();
-        console.log('DebtChart: Successfully fetched', debtData.length, 'historical data points');
+        const response = await fetch('/data/historical-debt.json');
+        if (response.ok) {
+          const localData = await response.json();
+          if (localData?.data?.length > 0) {
+            console.log('✅ DebtChart: Loaded', localData.records_count, 'years from local JSON');
+            debtData = localData.data;
+          } else {
+            throw new Error('No data in local JSON file');
+          }
+        } else {
+          throw new Error(`Failed to fetch local data: ${response.status}`);
+        }
       } catch (error) {
-        console.warn('DebtChart: Failed to fetch real data, using enhanced estimates:', error.message);
-        debtData = this.generateRealisticHistoricalData();
-        console.log('DebtChart: Generated', debtData.length, 'realistic historical data points');
+        console.warn('⚠️ DebtChart: Local data failed:', error.message);
+        console.log('🧪 DebtChart: Using test data...');
+        debtData = testData;
       }
       
+      console.log('📊 DebtChart: Final data:', debtData.length, 'years');
+      
       // Small delay to show loading state
-      await new Promise(resolve => setTimeout(resolve, 800));
+      await new Promise(resolve => setTimeout(resolve, 500));
       
       // Hide loading state and show canvas
       if (loadingElement) {
@@ -66,33 +87,43 @@ class DebtChart {
       canvas.style.display = 'block';
       
       // Create the chart
-      console.log('DebtChart: About to create chart with data:', debtData.slice(0, 3));
+      console.log('🎯 DebtChart: About to create chart...');
       this.createChart(canvas, debtData);
       
     } catch (error) {
-      console.error('DebtChart: Init failed:', error);
+      console.error('❌ DebtChart: Init failed:', error);
+      console.error('❌ Error stack:', error.stack);
       this.showError();
     }
-  }
-
-  /**
-   * Fetch historical debt data from local JSON files
+  }  /**
+   * Fetch historical debt data - TEMPORARILY using fallback for debugging
    */
   async fetchHistoricalDebtData() {
+    console.log('DebtChart: TEMPORARILY using fallback data for debugging...');
+    
+    // TEMPORARY: Use fallback data to test chart display
+    return this.generateRealisticHistoricalData();
+    
+    /* ORIGINAL LOCAL DATA CODE - commented out for debugging
     console.log('DebtChart: Loading historical data from local JSON...');
+    
+    // Debug: Check if LocalDataManager is available
+    console.log('DebtChart: LocalDataManager available?', typeof LocalDataManager);
+    console.log('DebtChart: this.localDataManager exists?', !!this.localDataManager);
     
     try {
       // Try to load from local JSON first
+      console.log('DebtChart: Calling localDataManager.getHistoricalDebtData()...');
       const localData = await this.localDataManager.getHistoricalDebtData();
       
-      if (localData && localData.data && localData.data.length > 0) {
-        console.log(`DebtChart: Loaded ${localData.records_count} years from local data`);
+      if (localData?.data?.length > 0) {
+        console.log(`✅ DebtChart: Loaded ${localData.records_count} years from local data`);
         console.log('DebtChart: Data source:', localData.data_source);
         console.log('DebtChart: Last updated:', localData.last_updated);
         
         // Check data age
         const dataAge = await this.localDataManager.getDataAge();
-        if (dataAge && dataAge.isStale) {
+        if (dataAge?.isStale) {
           console.warn(`⚠️ DebtChart: Data is ${dataAge.hours} hours old - consider running crawler.js`);
         }
         
@@ -102,10 +133,11 @@ class DebtChart {
       throw new Error('No local data available');
       
     } catch (error) {
-      console.error('DebtChart: Local data failed:', error.message);
+      console.error('❌ DebtChart: Local data failed:', error.message);
       console.log('DebtChart: Falling back to generated realistic data...');
       return this.generateRealisticHistoricalData();
     }
+    */
   }
 
   /**
@@ -268,18 +300,78 @@ class DebtChart {
   /**
    * Create Chart.js visualization with debt totals and annual increases
    */
-  createChart(canvas, data) {
+  /**
+   * Create a simple test chart
+   */
+  createSimpleChart(canvas, data) {
     try {
-      console.log('DebtChart: Creating chart with', data.length, 'data points');
+      console.log('🎯 DebtChart: Creating SIMPLE chart with', data.length, 'data points');
       
       const ctx = canvas.getContext('2d');
-      console.log('DebtChart: Got canvas context');
+      console.log('🎯 DebtChart: Got canvas context');
+      
+      console.log('🎯 DebtChart: About to create Chart.js instance...');
+      
+      this.chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: data.map(d => d.year.toString()),
+          datasets: [{
+            label: 'US National Debt',
+            data: data.map(d => d.debt),
+            borderColor: '#059669',
+            backgroundColor: 'rgba(5, 150, 105, 0.1)',
+            borderWidth: 2,
+            fill: true
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            title: {
+              display: true,
+              text: 'US National Debt (Test Chart)'
+            }
+          },
+          scales: {
+            y: {
+              ticks: {
+                callback: function(value) {
+                  return '$' + (value / 1000000000000).toFixed(1) + 'T';
+                }
+              }
+            }
+          }
+        }
+      });
+      
+      console.log('🎉 DebtChart: SIMPLE chart created successfully!');
+      console.log('🎉 DebtChart: Chart instance:', this.chart);
+      
+    } catch (error) {
+      console.error('❌ DebtChart: Failed to create SIMPLE chart:', error);
+      console.error('❌ Error details:', error.message);
+      console.error('❌ Stack trace:', error.stack);
+      this.showError();
+    }
+  }
+
+  createChart(canvas, data) {
+    try {
+      console.log('🎯 DebtChart: Creating chart with', data.length, 'data points');
+      console.log('🎯 DebtChart: Sample data:', data.slice(0, 2));
+      
+      const ctx = canvas.getContext('2d');
+      console.log('🎯 DebtChart: Got canvas context');
       
       // Calculate year-over-year debt increases
       const debtIncreases = this.calculateDebtIncreases(data);
-      console.log('DebtChart: Calculated', debtIncreases.length, 'debt increase data points');
+      console.log('🎯 DebtChart: Calculated', debtIncreases.length, 'debt increase data points');
       
       // Enhanced chart configuration with dual datasets
+      console.log('🎯 DebtChart: About to create Chart.js instance...');
+      
       this.chart = new Chart(ctx, {
         type: 'line',
         data: {
@@ -388,11 +480,14 @@ class DebtChart {
         }
       });
       
-      console.log('DebtChart: Chart created successfully!');
+      console.log('🎉 DebtChart: Chart created successfully!');
+      console.log('🎉 DebtChart: Chart instance:', this.chart);
+      console.log('🎉 DebtChart: Chart type:', this.chart.config.type);
       
     } catch (error) {
-      console.error('DebtChart: Failed to create chart:', error);
-      console.error('Error details:', error.message);
+      console.error('❌ DebtChart: Failed to create chart:', error);
+      console.error('❌ Error details:', error.message);
+      console.error('❌ Stack trace:', error.stack);
       // Show error in the chart area
       const loadingElement = document.getElementById('chartLoading');
       if (loadingElement) {
