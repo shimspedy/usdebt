@@ -736,7 +736,6 @@
             
             // Use real current debt as starting point - ensure we have data
             let currentDebt = liveData.currentDebt || 37454537246248.71;
-            console.log('💰 Starting counter with debt:', currentDebt);
             
             // Calculate realistic debt increase rate from historical data
             const latestYear = liveData.debtHistory && liveData.debtHistory.length > 0 ? 
@@ -744,8 +743,6 @@
             const debtPerSecond = latestYear?.annual_increase ? 
                 latestYear.annual_increase / (365 * 24 * 60 * 60) : // Real rate from data
                 39201; // Fallback rate (calculated from real 2025 data)
-            
-            console.log('📈 Debt increase per second:', debtPerSecond);
             
             setInterval(() => {
                 currentDebt += debtPerSecond;
@@ -769,8 +766,6 @@
         // Update statistics with live Government API data - full numbers format
         async function updateLiveStatistics() {
             try {
-                console.log('📊 Updating statistics with data:', liveData);
-                
                 // Calculate derived metrics from real data
                 const currentDebt = liveData.currentDebt || 37454537246248.71;
                 const receipts = liveData.mtsData.receipts || 4900000000000;
@@ -779,8 +774,6 @@
                 const population = liveData.population || 340110988;
                 const gdpEstimate = liveData.gdpEstimate || 29184890000000;
                 const interestRate = liveData.interestRate || 0.047;
-                
-                console.log('💡 Calculated values:', { currentDebt, population, gdpEstimate, interestRate });
                 
                 // Update UI elements with full numbers formatted like usdebtclock
                 document.getElementById('federalRevenue').textContent = '$' + receipts.toLocaleString('en-US');
@@ -824,11 +817,8 @@
                 ].join(' • ');
                 document.getElementById('dataSourceStatus').innerHTML = `📊 100% Gov APIs • ${apiSources}`;
                 
-                console.log('✅ Statistics updated successfully');
-                
             } catch (error) {
-                console.error('❌ Statistics update error:', error);
-                // Emergency fallback with source indicators
+                // Production fallback - no logging
                 document.getElementById('federalRevenue').textContent = '$4,900,000,000,000';
                 document.getElementById('federalSpending').textContent = '$6,800,000,000,000';
                 document.getElementById('budgetDeficit').textContent = '-$1,900,000,000,000';
@@ -859,25 +849,18 @@
 
         // Initialize everything
         document.addEventListener('DOMContentLoaded', async function() {
-            console.log('🚀 Initializing debt clock...');
-            
             // First, fetch all data
             await fetchLiveData();
-            console.log('✅ Data loaded:', liveData);
             
             // Initialize chart with real data
             setTimeout(async () => {
                 if (typeof Chart !== 'undefined') {
-                    console.log('🎯 Initializing chart...');
                     await initializeChart();
-                } else {
-                    console.error('❌ Chart.js not loaded');
                 }
             }, 500);
             
             // Update statistics immediately with loaded data
             setTimeout(async () => {
-                console.log('📊 Updating statistics...');
                 await updateLiveStatistics();
                 
                 // Start live counter with real debt
@@ -885,7 +868,6 @@
                 
                 // Refresh statistics every 5 minutes
                 setInterval(async () => {
-                    console.log('🔄 Refreshing data...');
                     await fetchLiveData();
                     await updateLiveStatistics();
                 }, 300000); // 5 minutes
