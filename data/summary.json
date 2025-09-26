@@ -1,0 +1,20 @@
+{
+  "last_crawled": "2025-09-26T16:54:26.439Z",
+  "files_created": [
+    "historical-debt.json"
+  ],
+  "summary": {
+    "historical_years": 5,
+    "latest_debt": {
+      "year": 2025,
+      "debt": 37454537246248.71,
+      "record_date": "2025-09-24",
+      "formatted_debt": "$37.5T",
+      "annual_increase": 1235931934558.8047,
+      "formatted_increase": "$1.2T",
+      "percentage_increase": "3.41"
+    },
+    "current_fiscal_year": null,
+    "latest_monthly_data": null
+  }
+}

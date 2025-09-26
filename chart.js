@@ -4,6 +4,10 @@ class DebtChart {
     this.canvasId = canvasId;
     this.chart = null;
     this.dataManager = new DataManager();
+    // Use LocalDataManager for local JSON data
+    this.localDataManager = new LocalDataManager();
+    
+    console.log('DebtChart: Initialized with local data support');
   }
 
   /**
@@ -56,85 +60,51 @@ class DebtChart {
       await new Promise(resolve => setTimeout(resolve, 800));
       
       // Hide loading state and show canvas
-      canvas.style.display = 'block';
       if (loadingElement) {
         loadingElement.style.display = 'none';
-        console.log('DebtChart: Hidden loading state');
       }
-
+      canvas.style.display = 'block';
+      
       // Create the chart
-      console.log('DebtChart: Creating chart...');
+      console.log('DebtChart: About to create chart with data:', debtData.slice(0, 3));
       this.createChart(canvas, debtData);
-      console.log('DebtChart: Chart initialization complete');
       
     } catch (error) {
-      console.error('DebtChart: Initialization failed:', error);
+      console.error('DebtChart: Init failed:', error);
       this.showError();
     }
   }
 
-    /**
-   * Fetch real historical debt data from Treasury API
+  /**
+   * Fetch historical debt data from local JSON files
    */
   async fetchHistoricalDebtData() {
-    console.log('DebtChart: Starting historical data fetch...');
-    
-    const currentYear = new Date().getFullYear();
-    const startYear = Math.max(2020, currentYear - 20); // API has data from 2020
-    
-    console.log(`DebtChart: Fetching data for years ${startYear} to ${currentYear}`);
+    console.log('DebtChart: Loading historical data from local JSON...');
     
     try {
-      // Get 500 records from 2020 onwards and sample yearly
-      const response = await this.dataManager.fetchFiscalData(
-        "/v2/accounting/od/debt_to_penny",
-        {
-          fields: "record_date,tot_pub_debt_out_amt",
-          filter: `record_date:gte:${startYear}-01-01`,
-          sort: "-record_date", // Most recent first
-          "page[size]": 500,
-          format: "json"
-        }
-      );
+      // Try to load from local JSON first
+      const localData = await this.localDataManager.getHistoricalDebtData();
       
-      if (!response.data || response.data.length === 0) {
-        throw new Error("No historical debt data returned from API");
+      if (localData && localData.data && localData.data.length > 0) {
+        console.log(`DebtChart: Loaded ${localData.records_count} years from local data`);
+        console.log('DebtChart: Data source:', localData.data_source);
+        console.log('DebtChart: Last updated:', localData.last_updated);
+        
+        // Check data age
+        const dataAge = await this.localDataManager.getDataAge();
+        if (dataAge && dataAge.isStale) {
+          console.warn(`⚠️ DebtChart: Data is ${dataAge.hours} hours old - consider running crawler.js`);
+        }
+        
+        return localData.data;
       }
       
-      console.log('DebtChart: Received', response.data.length, 'records from API');
-      
-      // Sample data - take first record from each year (most recent for each year)
-      const dataByYear = {};
-      response.data.forEach(record => {
-        if (record.record_date && record.tot_pub_debt_out_amt) {
-          const year = new Date(record.record_date).getFullYear();
-          const debt = parseFloat(record.tot_pub_debt_out_amt);
-          
-          // Only keep the most recent record for each year (since data is sorted by date desc)
-          if (!dataByYear[year]) {
-            dataByYear[year] = {
-              year,
-              debt,
-              record_date: record.record_date
-            };
-          }
-        }
-      });
-      
-      // Convert to array and sort by year
-      let historicalData = Object.values(dataByYear).sort((a, b) => a.year - b.year);
-      
-      // Supplement with realistic estimates for missing years before 2020
-      if (startYear < 2020) {
-        historicalData = this.supplementWithEstimates(historicalData);
-      }
-      
-      console.log('DebtChart: Successfully processed', historicalData.length, 'years of data');
-      return historicalData;
+      throw new Error('No local data available');
       
     } catch (error) {
-      console.error('DebtChart: Error fetching historical data:', error);
-      throw error;
+      console.error('DebtChart: Local data failed:', error.message);
+      console.log('DebtChart: Falling back to generated realistic data...');
+      return this.generateRealisticHistoricalData();
     }
   }
 

@@ -1,0 +1,49 @@
+{
+  "last_updated": "2025-09-26T16:54:26.162Z",
+  "data_source": "Treasury API - Debt to the Penny",
+  "records_count": 5,
+  "data": [
+    {
+      "year": 2021,
+      "debt": 29617214856051.75,
+      "record_date": "2021-12-31",
+      "formatted_debt": "$29.6T"
+    },
+    {
+      "year": 2022,
+      "debt": 31419689421557.9,
+      "record_date": "2022-12-30",
+      "formatted_debt": "$31.4T",
+      "annual_increase": 1802474565506.1484,
+      "formatted_increase": "$1.8T",
+      "percentage_increase": "6.09"
+    },
+    {
+      "year": 2023,
+      "debt": 34001493655565.48,
+      "record_date": "2023-12-29",
+      "formatted_debt": "$34.0T",
+      "annual_increase": 2581804234007.582,
+      "formatted_increase": "$2.6T",
+      "percentage_increase": "8.22"
+    },
+    {
+      "year": 2024,
+      "debt": 36218605311689.91,
+      "record_date": "2024-12-31",
+      "formatted_debt": "$36.2T",
+      "annual_increase": 2217111656124.426,
+      "formatted_increase": "$2.2T",
+      "percentage_increase": "6.52"
+    },
+    {
+      "year": 2025,
+      "debt": 37454537246248.71,
+      "record_date": "2025-09-24",
+      "formatted_debt": "$37.5T",
+      "annual_increase": 1235931934558.8047,
+      "formatted_increase": "$1.2T",
+      "percentage_increase": "3.41"
+    }
+  ]
+}
