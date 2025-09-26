@@ -4,6 +4,27 @@ class DataManager {
     this.cache = new Map();
     this.cacheTimeout = 2 * 60 * 1000; // Reduced to 2 minutes for more frequent API attempts
     this.useFallbackData = false; // Flag to use fallback when APIs fail
+    this.useProxy = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+  }
+
+  /**
+   * Get the appropriate API base URL
+   * @param {string} endpoint - API endpoint type (debt, mts, dts)
+   * @returns {string} Base URL for API calls
+   */
+  getApiBase(endpoint) {
+    if (this.useProxy) {
+      // Use proxy server for local development
+      const proxyMap = {
+        'debt': '/api/debt',
+        'mts': '/api/mts', 
+        'dts': '/api/dts'
+      };
+      return proxyMap[endpoint] || '/api/debt';
+    } else {
+      // Production: use direct Treasury API (CORS-enabled endpoints only)
+      return 'https://api.fiscaldata.treasury.gov/services/api/fiscal_service';
+    }
   }
 
   /**
@@ -87,13 +108,13 @@ class DataManager {
   }
 
   /**
-   * Fetch data from Fiscal Data API with retry logic
+   * Fetch data from Fiscal Data API with retry logic and proxy support
    * @param {string} path - API path
    * @param {Object} params - Query parameters
    * @param {number} retries - Number of retries
    * @returns {Promise<Object>} API response
    */
-  async fetchFiscalData(path, params = {}, retries = CONFIG.api.fiscalData.retries) {
+  async fetchFiscalData(path, params = {}, retries = 2) {
     const queryString = Utils.createSearchParams(params);
     const fullPath = path + (queryString ? `?${queryString}` : "");
     
@@ -104,39 +125,26 @@ class DataManager {
       return cached;
     }
 
-    let lastError;
+    // Determine API type and base URL
+    let endpoint = 'debt';
+    if (path.includes('/mts/')) endpoint = 'mts';
+    if (path.includes('/dts/')) endpoint = 'dts';
     
-    // Try more retries with longer delays for real API access
-    const maxRetries = retries * 2; // Double the retries
+    const baseUrl = this.getApiBase(endpoint);
+    const finalUrl = this.useProxy ? `${baseUrl}${queryString ? '?' + queryString : ''}` : `${baseUrl}${fullPath}`;
     
-    for (let attempt = 0; attempt <= maxRetries; attempt++) {
-      const baseIndex = attempt % CONFIG.api.fiscalData.bases.length;
-      const baseUrl = CONFIG.api.fiscalData.bases[baseIndex];
-      
-      try {
-        const data = await this.fetchJSON(`${baseUrl}${fullPath}`);
-        this.setCache(cacheKey, data);
-        this.useFallbackData = false; // Reset fallback flag on success
-        Utils.logError('Successfully connected to Treasury API!');
-        return data;
-      } catch (error) {
-        lastError = error;
-        Utils.logError(`FiscalData API attempt ${attempt + 1}/${maxRetries + 1}`, error);
-        
-        if (attempt < maxRetries) {
-          // Use exponential backoff with longer delays
-          const delay = Math.min(1000 * Math.pow(1.5, attempt), 5000);
-          await Utils.delay(delay);
-        }
-      }
+    try {
+      const data = await this.fetchJSON(finalUrl);
+      this.setCache(cacheKey, data);
+      this.useFallbackData = false;
+      return data;
+    } catch (error) {
+      Utils.logError('Treasury API failed, using fallback data', error);
+      this.useFallbackData = true;
+      const fallbackData = this.getFallbackFiscalData();
+      this.setCache(cacheKey, fallbackData);
+      return fallbackData;
     }
-    
-    // Only use fallback data as last resort after all attempts fail
-    Utils.logError('All Treasury API attempts failed. Network or API may be down. Using fallback data as last resort.');
-    this.useFallbackData = true;
-    const fallbackData = this.getFallbackFiscalData();
-    this.setCache(cacheKey, fallbackData);
-    return fallbackData;
   }
 
   /**

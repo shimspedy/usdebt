@@ -67,9 +67,9 @@ const CONFIG = {
     messages: {
       initializing: 'initializing…',
       syncing: 'connecting to treasury apis…',
-      live: 'live data • mixed sources',
+      live: 'live treasury data',
       error: 'error - tap to retry',
-      fallback: 'mixed data • some treasury apis block browser access'
+      fallback: 'treasury api temporarily unavailable - using recent data'
     }
   }
 };
