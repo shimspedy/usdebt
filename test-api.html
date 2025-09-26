@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>API Test</title>
+</head>
+<body>
+    <div id="results"></div>
+    <script>
+        async function testAPIs() {
+            const results = document.getElementById('results');
+            
+            // Test World Bank Population API
+            try {
+                console.log('Testing World Bank Population API...');
+                const popResponse = await fetch('https://api.worldbank.org/v2/country/USA/indicator/SP.POP.TOTL?format=json&per_page=5&date=2020:2025');
+                const popData = await popResponse.json();
+                if (popData && popData[1] && popData[1][0]) {
+                    const pop2024 = popData[1][0].value;
+                    results.innerHTML += `<p>✅ Population 2024: ${pop2024.toLocaleString()}</p>`;
+                } else {
+                    results.innerHTML += `<p>❌ Population API failed</p>`;
+                }
+            } catch (e) {
+                results.innerHTML += `<p>❌ Population API error: ${e.message}</p>`;
+            }
+
+            // Test World Bank GDP API
+            try {
+                console.log('Testing World Bank GDP API...');
+                const gdpResponse = await fetch('https://api.worldbank.org/v2/country/USA/indicator/NY.GDP.MKTP.CD?format=json&per_page=5&date=2020:2025');
+                const gdpData = await gdpResponse.json();
+                if (gdpData && gdpData[1] && gdpData[1][0]) {
+                    const gdp2024 = gdpData[1][1].value;
+                    results.innerHTML += `<p>✅ GDP 2024: $${(gdp2024/1000000000000).toFixed(2)}T</p>`;
+                } else {
+                    results.innerHTML += `<p>❌ GDP API failed</p>`;
+                }
+            } catch (e) {
+                results.innerHTML += `<p>❌ GDP API error: ${e.message}</p>`;
+            }
+
+            // Test Treasury Debt API via proxy
+            try {
+                console.log('Testing Treasury Debt API...');
+                const debtResponse = await fetch('/api/debt?fields=record_date,tot_pub_debt_out_amt&sort=-record_date&page[size]=1&format=json');
+                const debtData = await debtResponse.json();
+                if (debtData && debtData.data && debtData.data[0]) {
+                    const currentDebt = parseFloat(debtData.data[0].tot_pub_debt_out_amt);
+                    results.innerHTML += `<p>✅ Current Debt: $${(currentDebt/1000000000000).toFixed(2)}T</p>`;
+                } else {
+                    results.innerHTML += `<p>❌ Treasury Debt API failed</p>`;
+                }
+            } catch (e) {
+                results.innerHTML += `<p>❌ Treasury Debt API error: ${e.message}</p>`;
+            }
+
+            // Test historical debt data
+            try {
+                console.log('Testing historical debt data...');
+                const histResponse = await fetch('/data/historical-debt.json');
+                const histData = await histResponse.json();
+                if (histData && histData.data) {
+                    results.innerHTML += `<p>✅ Historical data: ${histData.data.length} years available</p>`;
+                } else {
+                    results.innerHTML += `<p>❌ Historical data failed</p>`;
+                }
+            } catch (e) {
+                results.innerHTML += `<p>❌ Historical data error: ${e.message}</p>`;
+            }
+        }
+
+        testAPIs();
+    </script>
+</body>
+</html>
