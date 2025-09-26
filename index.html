@@ -433,6 +433,9 @@
 
             <!-- Statistics Section -->
             <div class="stats-section">
+                <div id="dataSourceStatus" style="text-align: center; margin-bottom: 15px; padding: 10px; border-radius: 8px; background: rgba(0,0,0,0.3); font-size: 0.85rem;">
+                    <div id="apiStatusIndicator" style="color: #f59e0b;">🔄 Checking data sources...</div>
+                </div>
                 <div class="stats-grid">
                     <div class="stat-box">
                         <div class="stat-title">Federal Revenue</div>
@@ -561,11 +564,12 @@
         // Fetch live Treasury data + Additional Government APIs
         async function fetchLiveData() {
             try {
-                // Detect if running locally or on Netlify
-                const isLocal = window.location.hostname === 'localhost';
-                const apiBase = isLocal ? 'http://localhost:8000' : '';
+                // For local development, call APIs directly to avoid CORS/Netlify function issues
+                const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
                 
-                // Initialize with current API data
+                console.log(`🌍 Environment: ${isLocal ? 'Local Development' : 'Production'}`);
+                
+                // Initialize with zeros - will be replaced by API data
                 liveData.currentDebt = 0;
                 liveData.population = 0;
                 liveData.gdpEstimate = 0;
@@ -578,31 +582,61 @@
                     const historicalData = await historicalResponse.json();
                     if (historicalData?.data) {
                         liveData.debtHistory = historicalData.data;
+                        console.log('✅ Historical debt data loaded');
                     }
                 } catch (histError) {
-                    console.warn('Historical data failed to load, using fallback');
+                    console.warn('⚠️ Historical data failed to load:', histError);
                 }
                 
-                // Get current debt from Treasury Fiscal Data API
+                // Get current debt from Treasury Fiscal Data API - DIRECT CALL
+                console.log('💰 Fetching current debt from Treasury API...');
                 try {
-                    const debtResponse = await fetch(`${apiBase}/api/debt?fields=record_date,tot_pub_debt_out_amt&sort=-record_date&page[size]=1&format=json`);
-                    const debtData = await debtResponse.json();
+                    let debtResponse, debtData;
+                    
+                    if (isLocal) {
+                        // For local development - call Treasury API directly
+                        debtResponse = await fetch('https://api.fiscaldata.treasury.gov/services/api/v1/accounting/od/debt_to_penny?fields=record_date,tot_pub_debt_out_amt&sort=-record_date&page[size]=1&format=json');
+                    } else {
+                        // For production - use Netlify function
+                        debtResponse = await fetch('/api/debt?fields=record_date,tot_pub_debt_out_amt&sort=-record_date&page[size]=1&format=json');
+                    }
+                    
+                    debtData = await debtResponse.json();
+                    console.log('📊 Debt API Response:', debtData);
+                    
                     if (debtData?.data?.[0]?.tot_pub_debt_out_amt) {
+                        // Debt data is in dollars already
                         liveData.currentDebt = parseFloat(debtData.data[0].tot_pub_debt_out_amt);
-                        liveData.debtSource = `Treasury API (${debtData.data[0].record_date})`;
-                        console.log('✅ Live debt data loaded:', liveData.currentDebt);
+                        liveData.debtSource = `Treasury Debt to Penny API (${debtData.data[0].record_date})`;
+                        console.log('✅ LIVE DEBT DATA:', {
+                            amount: liveData.currentDebt,
+                            formatted: '$' + Math.round(liveData.currentDebt).toLocaleString('en-US'),
+                            date: debtData.data[0].record_date
+                        });
+                    } else {
+                        console.warn('⚠️ No debt data in API response');
                     }
                 } catch (debtError) {
-                    console.warn('Treasury debt API failed:', debtError);
+                    console.warn('❌ Treasury debt API failed:', debtError);
                 }
                 
-                // Get current fiscal year receipts and outlays from MTS API
+                // Get current fiscal year receipts and outlays from MTS API - DIRECT CALL
+                console.log('💵 Fetching current fiscal year data from Treasury MTS API...');
                 try {
                     const currentFY = 2025; // Current fiscal year
                     
                     // Get year-to-date receipts for FY2025
-                    const receiptsResponse = await fetch(`${apiBase}/api/mts?fields=record_date,current_fytd_rcpt_amt,classification_desc&filter=record_fiscal_year:eq:${currentFY},classification_desc:eq:Total&sort=-record_date&page[size]=1&format=json`);
-                    const receiptsData = await receiptsResponse.json();
+                    let receiptsResponse, receiptsData;
+                    
+                    if (isLocal) {
+                        // Direct API call for local development
+                        receiptsResponse = await fetch(`https://api.fiscaldata.treasury.gov/services/api/v1/accounting/mts/mts_table_1?fields=record_date,current_fytd_rcpt_amt,classification_desc&filter=record_fiscal_year:eq:${currentFY},classification_desc:eq:Total&sort=-record_date&page[size]=1&format=json`);
+                    } else {
+                        // Netlify function call for production
+                        receiptsResponse = await fetch(`${apiBase}/api/mts?fields=record_date,current_fytd_rcpt_amt,classification_desc&filter=record_fiscal_year:eq:${currentFY},classification_desc:eq:Total&sort=-record_date&page[size]=1&format=json`);
+                    }
+                    
+                    receiptsData = await receiptsResponse.json();
                     
                     console.log('🔍 MTS Receipts API Response:', receiptsData);
                     
@@ -620,8 +654,17 @@
                     }
                     
                     // Get year-to-date outlays for FY2025
-                    const outlaysResponse = await fetch(`${apiBase}/api/mts?fields=record_date,current_fytd_outly_amt,classification_desc&filter=record_fiscal_year:eq:${currentFY},classification_desc:eq:Total&sort=-record_date&page[size]=1&format=json`);
-                    const outlaysData = await outlaysResponse.json();
+                    let outlaysResponse, outlaysData;
+                    
+                    if (isLocal) {
+                        // Direct API call for local development
+                        outlaysResponse = await fetch(`https://api.fiscaldata.treasury.gov/services/api/v1/accounting/mts/mts_table_1?fields=record_date,current_fytd_outly_amt,classification_desc&filter=record_fiscal_year:eq:${currentFY},classification_desc:eq:Total&sort=-record_date&page[size]=1&format=json`);
+                    } else {
+                        // Netlify function call for production
+                        outlaysResponse = await fetch(`${apiBase}/api/mts?fields=record_date,current_fytd_outly_amt,classification_desc&filter=record_fiscal_year:eq:${currentFY},classification_desc:eq:Total&sort=-record_date&page[size]=1&format=json`);
+                    }
+                    
+                    outlaysData = await outlaysResponse.json();
                     
                     if (outlaysData?.data?.[0]?.current_fytd_outly_amt) {
                         // MTS data is in millions, convert to actual dollars
@@ -1139,13 +1182,22 @@
                 const gdpEstimate = liveData.gdpEstimate || 29500000000000;   // 2025 estimate
                 const interestRate = liveData.interestRate || 0.048;          // Current rate
                 
-                // Validate data freshness
-                console.log('📊 Current API data status:', {
-                    debt: currentDebt > 0 ? '✅ Live' : '❌ Fallback',
-                    receipts: liveData.mtsData.receipts > 0 ? '✅ Live' : '❌ Fallback',
-                    outlays: liveData.mtsData.outlays > 0 ? '✅ Live' : '❌ Fallback',
-                    population: liveData.population > 0 ? '✅ Live' : '❌ Fallback',
-                    gdp: liveData.gdpEstimate > 0 ? '✅ Live' : '❌ Fallback'
+                // Validate data freshness - check if we're using API data vs fallbacks
+                const dataStatus = {
+                    debt: liveData.currentDebt > 0 && liveData.debtSource ? '✅ LIVE API' : '❌ FALLBACK',
+                    receipts: liveData.mtsData.receipts > 0 && liveData.receiptsSource ? '✅ LIVE API' : '❌ FALLBACK',
+                    outlays: liveData.mtsData.outlays > 0 && liveData.outlaysSource ? '✅ LIVE API' : '❌ FALLBACK',
+                    population: liveData.population > 0 && liveData.populationSource ? '✅ LIVE API' : '❌ FALLBACK',
+                    gdp: liveData.gdpEstimate > 0 && liveData.gdpSource ? '✅ LIVE API' : '❌ FALLBACK'
+                };
+                
+                console.log('📊 ACTUAL DATA SOURCE STATUS:', dataStatus);
+                console.log('💰 Current Values:', {
+                    debt: '$' + Math.round(currentDebt).toLocaleString('en-US'),
+                    receipts: '$' + Math.round(receipts).toLocaleString('en-US'), 
+                    outlays: '$' + Math.round(outlays).toLocaleString('en-US'),
+                    population: population.toLocaleString('en-US'),
+                    gdp: '$' + Math.round(gdpEstimate).toLocaleString('en-US')
                 });
                 
                 // Update UI elements with full numbers formatted like usdebtclock
@@ -1184,8 +1236,18 @@
                 
                 console.log('✅ All statistics updated with validated data');
                 
-                // Update API status indicator
-                updateApiStatus();
+                // Update API status indicator in UI
+                const liveApiCount = Object.values(dataStatus).filter(status => status.includes('✅')).length;
+                const totalApis = Object.keys(dataStatus).length;
+                const statusColor = liveApiCount >= 3 ? '#22c55e' : liveApiCount >= 1 ? '#f59e0b' : '#ef4444';
+                const statusText = liveApiCount === totalApis ? 
+                    `✅ All ${totalApis} APIs Live - Real-time Data` : 
+                    `⚠️ ${liveApiCount}/${totalApis} APIs Live - Mixed Data`;
+                
+                document.getElementById('apiStatusIndicator').innerHTML = 
+                    `<span style="color: ${statusColor};">${statusText}</span>`;
+                
+                console.log('✅ All statistics and UI updated');
                 
             } catch (error) {
                 console.error('❌ Error updating statistics:', error);
