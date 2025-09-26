@@ -573,12 +573,14 @@
                 
                 console.log(`🌍 Environment: ${isLocal ? 'Local Development' : 'Production'}`);
                 
-                // Initialize with zeros - will be replaced by API data
+                // Initialize with zeros - all data must come from APIs
                 liveData.currentDebt = 0;
                 liveData.population = 0;
                 liveData.gdpEstimate = 0;
                 liveData.interestRate = 0;
                 liveData.mtsData = { receipts: 0, outlays: 0 };
+                
+                console.log('🌐 Fetching ALL data from government APIs only...');
                 
                 // Load historical debt data from JSON file
                 try {
@@ -592,44 +594,77 @@
                     console.warn('⚠️ Historical data failed to load:', histError);
                 }
                 
-                // Get current debt from Treasury Fiscal Data API - DIRECT CALL
+                // Get current debt from Treasury Fiscal Data API
                 console.log('💰 Fetching current debt from Treasury API...');
                 try {
-                    let debtResponse, debtData;
+                    let debtData;
                     
                     if (isLocal) {
-                        // For local development - try direct call first, then CORS proxy if needed
-                        try {
-                            debtResponse = await fetch('https://api.fiscaldata.treasury.gov/services/api/v1/accounting/od/debt_to_penny?fields=record_date,tot_pub_debt_out_amt&sort=-record_date&page[size]=1&format=json');
-                            if (!debtResponse.ok) throw new Error('Direct API failed');
-                            debtData = await debtResponse.json();
-                        } catch (directError) {
-                            console.warn('Direct API blocked by CORS, trying CORS proxy...');
-                            const proxyResponse = await fetch('https://api.allorigins.win/get?url=' + encodeURIComponent('https://api.fiscaldata.treasury.gov/services/api/v1/accounting/od/debt_to_penny?fields=record_date,tot_pub_debt_out_amt&sort=-record_date&page[size]=1&format=json'));
-                            const proxyData = await proxyResponse.json();
-                            debtData = JSON.parse(proxyData.contents);
+                        // Try multiple API endpoints for reliability
+                        const debtEndpoints = [
+                            'https://api.fiscaldata.treasury.gov/services/api/v1/accounting/od/debt_to_penny?format=json&page[size]=1&sort=-record_date',
+                            'https://api.fiscaldata.treasury.gov/services/api/v1/accounting/od/debt_to_penny?format=json&page[size]=1'
+                        ];
+                        
+                        for (const endpoint of debtEndpoints) {
+                            try {
+                                console.log('🔄 Trying endpoint:', endpoint);
+                                const response = await fetch(endpoint);
+                                if (response.ok) {
+                                    debtData = await response.json();
+                                    if (debtData?.data && debtData.data.length > 0) {
+                                        console.log('✅ Direct API success');
+                                        break;
+                                    }
+                                }
+                            } catch (directError) {
+                                console.warn('Direct API failed:', endpoint, directError.message);
+                            }
+                        }
+                        
+                        // If direct APIs fail, try CORS proxy with simpler endpoint
+                        if (!debtData?.data) {
+                            try {
+                                console.log('🔄 Trying CORS proxy...');
+                                const proxyUrl = 'https://api.allorigins.win/get?url=' + encodeURIComponent('https://api.fiscaldata.treasury.gov/services/api/v1/accounting/od/debt_to_penny?format=json&page[size]=1');
+                                const proxyResponse = await fetch(proxyUrl);
+                                const proxyData = await proxyResponse.json();
+                                if (proxyData.contents && !proxyData.contents.includes('404 Error')) {
+                                    debtData = JSON.parse(proxyData.contents);
+                                    console.log('✅ CORS proxy success');
+                                }
+                            } catch (proxyError) {
+                                console.warn('CORS proxy also failed:', proxyError);
+                            }
                         }
                     } else {
-                        // For production - use Netlify function
-                        debtResponse = await fetch('/api/debt?fields=record_date,tot_pub_debt_out_amt&sort=-record_date&page[size]=1&format=json');
-                        debtData = await debtResponse.json();
+                        // Production: use Netlify functions
+                        const response = await fetch('/api/debt?format=json&page[size]=1&sort=-record_date');
+                        debtData = await response.json();
                     }
-                    console.log('📊 Debt API Response:', debtData);
                     
-                    if (debtData?.data?.[0]?.tot_pub_debt_out_amt) {
-                        // Debt data is in dollars already
-                        liveData.currentDebt = parseFloat(debtData.data[0].tot_pub_debt_out_amt);
-                        liveData.debtSource = `Treasury Debt to Penny API (${debtData.data[0].record_date})`;
-                        console.log('✅ LIVE DEBT DATA:', {
-                            amount: liveData.currentDebt,
-                            formatted: '$' + Math.round(liveData.currentDebt).toLocaleString('en-US'),
-                            date: debtData.data[0].record_date
-                        });
+                    // Validate and process debt data
+                    if (debtData?.data && debtData.data.length > 0) {
+                        const latestRecord = debtData.data[0];
+                        if (latestRecord.tot_pub_debt_out_amt || latestRecord.total_debt) {
+                            // Handle different field names from API
+                            const debtAmount = parseFloat(latestRecord.tot_pub_debt_out_amt || latestRecord.total_debt);
+                            if (debtAmount > 0) {
+                                liveData.currentDebt = debtAmount;
+                                liveData.debtSource = `Treasury API (${latestRecord.record_date})`;
+                                console.log('✅ VERIFIED DEBT DATA:', {
+                                    amount: liveData.currentDebt,
+                                    formatted: '$' + Math.round(liveData.currentDebt).toLocaleString('en-US'),
+                                    source: liveData.debtSource
+                                });
+                            }
+                        }
                     } else {
-                        console.warn('⚠️ No debt data in API response');
+                        console.warn('⚠️ No valid debt data structure in API response:', debtData);
                     }
                 } catch (debtError) {
                     console.warn('❌ Treasury debt API failed:', debtError);
+                    console.log('⚠️  Debt will show "Loading from API..." until Treasury API succeeds');
                 }
                 
                 // Get current fiscal year receipts and outlays from MTS API - DIRECT CALL
@@ -1257,18 +1292,36 @@
 
         // Update statistics with live Government API data - API ONLY, NO HARDCODED VALUES
         async function updateLiveStatistics() {
+            console.log('📊 Updating statistics with API data verification...');
+            
             try {
+                // Validate all API data sources
+                const apiValidation = {
+                    debt: liveData.currentDebt > 0,
+                    receipts: liveData.mtsData.receipts > 0,
+                    outlays: liveData.mtsData.outlays > 0,
+                    population: liveData.population > 0
+                };
+                
+                console.log('🔍 API Data Validation:', apiValidation);
+                
                 // Always fetch fresh API data first
-                if (!liveData.currentDebt || !liveData.mtsData.receipts) {
+                if (!apiValidation.debt || !apiValidation.receipts) {
                     console.log('🔄 Fetching fresh API data...');
                     await fetchLiveData();
+                    
+                    // Re-validate after fetch
+                    apiValidation.debt = liveData.currentDebt > 0;
+                    apiValidation.receipts = liveData.mtsData.receipts > 0;
+                    apiValidation.outlays = liveData.mtsData.outlays > 0;
+                    apiValidation.population = liveData.population > 0;
                 }
                 
-                // Use ONLY API data - no fallbacks
-                const currentDebt = liveData.currentDebt;
-                const receipts = liveData.mtsData.receipts; 
-                const outlays = liveData.mtsData.outlays;
-                const population = liveData.population;
+                // Use ONLY verified API data
+                const currentDebt = apiValidation.debt ? liveData.currentDebt : null;
+                const receipts = apiValidation.receipts ? liveData.mtsData.receipts : null; 
+                const outlays = apiValidation.outlays ? liveData.mtsData.outlays : null;
+                const population = apiValidation.population ? liveData.population : null;
                 const gdpEstimate = liveData.gdpEstimate;
                 const interestRate = liveData.interestRate;
                 
