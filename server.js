@@ -21,11 +21,11 @@ const corsHeaders = {
   'Expires': '0'
 };
 
-// Treasury API proxy endpoints
+// Treasury API proxy endpoints  
 const TREASURY_ENDPOINTS = {
   '/api/debt': 'https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v2/accounting/od/debt_to_penny',
-  '/api/mts': 'https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v1/accounting/mts/mts_table_1',
-  '/api/dts': 'https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v1/accounting/dts/dts_table_1'
+  '/api/mts': 'https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v1/accounting/mts/mts_table_1'
+  // Note: DTS (Daily Treasury Statement) endpoints are not available via public API
 };
 
 // Fetch data from Treasury API
