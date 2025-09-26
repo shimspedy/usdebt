@@ -33,19 +33,27 @@ class DebtChart {
       
       console.log('DebtChart: Found canvas element');
 
-      // Show loading state briefly
+      // Show loading state
       canvas.style.display = 'none';
       if (loadingElement) {
         loadingElement.style.display = 'flex';
         console.log('DebtChart: Showing loading state');
       }
 
-      // Generate realistic mock data
-      const debtData = this.generateMockData();
-      console.log('DebtChart: Generated', debtData.length, 'data points');
+      // Try to fetch real historical debt data
+      let debtData;
+      try {
+        console.log('DebtChart: Fetching real historical debt data...');
+        debtData = await this.fetchHistoricalDebtData();
+        console.log('DebtChart: Successfully fetched', debtData.length, 'historical data points');
+      } catch (error) {
+        console.warn('DebtChart: Failed to fetch real data, using enhanced estimates:', error.message);
+        debtData = this.generateRealisticHistoricalData();
+        console.log('DebtChart: Generated', debtData.length, 'realistic historical data points');
+      }
       
       // Small delay to show loading state
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise(resolve => setTimeout(resolve, 800));
       
       // Hide loading state and show canvas
       canvas.style.display = 'block';
