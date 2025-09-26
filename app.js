@@ -260,13 +260,14 @@ class FiscalDashboard {
         const response = await this.dataManager.fetchFiscalData(
           "/v1/accounting/mts/mts_table_1",
           {
-            fields: "record_date,current_fytd_rcpt_amt",
+            fields: "record_date,current_month_gross_rcpt_amt,classification_desc",
+            filter: "record_type_cd:eq:SL,record_fiscal_year:eq:2025,classification_desc:eq:Year-to-Date",
             sort: "-record_date",
             "page[size]": 2,
             format: "json"
           }
         );
-        return DataProcessor.processMTSData(response.data || [], 'current_fytd_rcpt_amt');
+        return DataProcessor.processMTSData(response.data || [], 'current_month_gross_rcpt_amt');
       },
       render: v => Utils.formatUSD(v || 0, 0)
     });
@@ -279,13 +280,14 @@ class FiscalDashboard {
         const response = await this.dataManager.fetchFiscalData(
           "/v1/accounting/mts/mts_table_1",
           {
-            fields: "record_date,current_fytd_net_outly_amt",
+            fields: "record_date,current_month_gross_outly_amt,classification_desc",
+            filter: "record_type_cd:eq:SL,record_fiscal_year:eq:2025,classification_desc:eq:Year-to-Date",
             sort: "-record_date",
             "page[size]": 2,
             format: "json"
           }
         );
-        return DataProcessor.processMTSData(response.data || [], 'current_fytd_net_outly_amt');
+        return DataProcessor.processMTSData(response.data || [], 'current_month_gross_outly_amt');
       },
       render: v => Utils.formatUSD(v || 0, 0)
     });
@@ -337,24 +339,68 @@ class FiscalDashboard {
       render: v => Utils.formatUSD(v || 0, 0)
     });
 
-    // 6. US Population (estimated)
+    // 6. US Population (estimated) - with recent fallback
     this.register("pop", {
       title: "US Population (est.)",
       badge: "EST.",
       fetcher: async () => {
-        const data = await this.dataManager.fetchWorldBank("SP.POP.TOTL", 8);
-        return DataProcessor.processWorldBankData(data);
+        try {
+          const data = await this.dataManager.fetchWorldBank("SP.POP.TOTL", 8);
+          return DataProcessor.processWorldBankData(data);
+        } catch (error) {
+          // Use most recent available Census/World Bank data
+          const currentDate = new Date();
+          const baseYear = 2023; // Last available World Bank data
+          const yearsElapsed = currentDate.getFullYear() - baseYear;
+          const monthsElapsed = (yearsElapsed * 12) + currentDate.getMonth();
+          
+          // US population ~336.8M (2023) with ~0.4% annual growth
+          const basePopulation = 336806231;
+          const annualGrowthRate = 0.004; // 0.4% per year
+          const monthlyGrowthRate = annualGrowthRate / 12;
+          const currentPopulation = basePopulation * Math.pow(1 + monthlyGrowthRate, monthsElapsed);
+          
+          return {
+            baseValue: currentPopulation,
+            baseTs: Date.now(),
+            ratePerSec: (currentPopulation * annualGrowthRate) / (365 * 24 * 3600),
+            meta: `Estimated from 2023 census data`
+          };
+        }
       },
       render: v => Utils.formatNumber(v || 0)
     });
 
-    // 7. US GDP (nominal, estimated)
+    // 7. US GDP (nominal, estimated) - with recent fallback
     this.register("gdp", {
       title: "US GDP (nominal, est.)",
       badge: "EST.",
       fetcher: async () => {
-        const data = await this.dataManager.fetchWorldBank("NY.GDP.MKTP.CD", 8);
-        return DataProcessor.processWorldBankData(data);
+        try {
+          const data = await this.dataManager.fetchWorldBank("NY.GDP.MKTP.CD", 8);
+          return DataProcessor.processWorldBankData(data);
+        } catch (error) {
+          Utils.logError('World Bank GDP API failed, using estimate', error);
+          
+          // Use most recent available World Bank/BEA data
+          const currentDate = new Date();
+          const baseYear = 2023; // Last available World Bank data
+          const yearsElapsed = currentDate.getFullYear() - baseYear;
+          const monthsElapsed = (yearsElapsed * 12) + currentDate.getMonth();
+          
+          // US GDP ~$27.36 trillion (2023) with ~2.5% annual nominal growth
+          const baseGDP = 27360935000000; // $27.36 trillion
+          const annualGrowthRate = 0.025; // 2.5% per year nominal
+          const monthlyGrowthRate = annualGrowthRate / 12;
+          const currentGDP = baseGDP * Math.pow(1 + monthlyGrowthRate, monthsElapsed);
+          
+          return {
+            baseValue: currentGDP,
+            baseTs: Date.now(),
+            ratePerSec: (currentGDP * annualGrowthRate) / (365 * 24 * 3600),
+            meta: `Estimated from 2023 World Bank data`
+          };
+        }
       },
       render: v => Utils.formatUSD(v || 0, 0)
     });

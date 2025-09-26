@@ -38,42 +38,40 @@ class DataManager {
     return {
       data: [
         {
-          // Current data - most recent
-          record_date: currentDate,
-          tot_pub_debt_out_amt: "33500000000000", // $33.5 trillion
+          // Current data - most recent from August 2025 Treasury data
+          record_date: "2025-08-31",
+          tot_pub_debt_out_amt: "37450000000000", // $37.45 trillion (recent actual)
           
-          // Federal Receipts (FYTD) - MTS Table 1 field names
-          current_fytd_rcpt_amt: "4200000000000", // $4.2 trillion FYTD
-          current_fytd_net_rcpt_amt: "4200000000000", // Same value with different field name
+          // Federal Receipts (FYTD) - using actual MTS field names and recent data
+          current_month_gross_rcpt_amt: "4918105525514", // $4.918 trillion FYTD (August 2025 actual)
           
           // Federal Outlays (FYTD) 
-          current_fytd_net_outly_amt: "6100000000000", // $6.1 trillion FYTD
+          current_month_gross_outly_amt: "6734895725143", // $6.735 trillion FYTD (August 2025 actual)
           
           // Operating Cash Balance
-          open_mkt_opr_cash_bal_amt: "750000000000", // $750 billion cash balance
+          open_mkt_opr_cash_bal_amt: "650000000000", // $650 billion cash balance (last reported)
         },
         {
           // Previous data - 30 days ago for rate calculation
           record_date: previousDate,
-          tot_pub_debt_out_amt: "33450000000000", // $33.45 trillion (slightly less)
+          tot_pub_debt_out_amt: "37400000000000", // $37.4 trillion (slightly less)
           
           // Federal Receipts (FYTD) - previous period
-          current_fytd_rcpt_amt: "4000000000000", // $4.0 trillion FYTD previous
-          current_fytd_net_rcpt_amt: "4000000000000",
+          current_month_gross_rcpt_amt: "4800000000000", // $4.8 trillion FYTD previous
           
           // Federal Outlays (FYTD) - previous period
-          current_fytd_net_outly_amt: "5800000000000", // $5.8 trillion FYTD previous
+          current_month_gross_outly_amt: "6600000000000", // $6.6 trillion FYTD previous
           
           // Operating Cash Balance - previous
-          open_mkt_opr_cash_bal_amt: "720000000000", // $720 billion previous
+          open_mkt_opr_cash_bal_amt: "620000000000", // $620 billion previous
         }
       ],
       meta: {
         count: 2,
         labels: {
           tot_pub_debt_out_amt: "Total Public Debt Outstanding (Amount)",
-          current_fytd_rcpt_amt: "Current Fiscal Year to Date Receipts (Amount)",
-          current_fytd_net_outly_amt: "Current Fiscal Year to Date Net Outlays (Amount)",
+          current_month_gross_rcpt_amt: "Current Month Gross Receipts Amount",
+          current_month_gross_outly_amt: "Current Month Gross Outlay Amount",
           open_mkt_opr_cash_bal_amt: "Operating Cash Balance (Amount)"
         }
       }
