@@ -357,24 +357,20 @@
                 </div>
             </div>
 
-            <!-- Chart Section -->
+            <!-- Comprehensive Fiscal Chart Section -->
             <div class="chart-section">
-                <div class="chart-title">📈 DEBT GROWTH TRAJECTORY (20 Years: 2005-2025)</div>
-                <div class="chart-container">
-                    <canvas id="debtChart"></canvas>
-                </div>
-            </div>
-
-            <!-- Presidential Spending Chart Section -->
-            <div class="chart-section">
-                <div class="chart-title">💰 FEDERAL SPENDING BY PRESIDENT (20 Years)</div>
+                <div class="chart-title">� COMPREHENSIVE U.S. FISCAL ANALYSIS (20 Years: 2005-2025)</div>
                 <div style="text-align: center; margin-bottom: 15px; font-size: 0.9rem;">
-                    <span style="color: #dc2626; font-weight: bold;">🔴 Republican</span>
-                    <span style="margin: 0 20px;">•</span>
-                    <span style="color: #3b82f6; font-weight: bold;">🔵 Democrat</span>
+                    <span style="color: #ff4757; font-weight: bold;">🔴 National Debt</span>
+                    <span style="margin: 0 15px;">•</span>
+                    <span style="color: #dc2626; font-weight: bold;">� Republican Spending</span>
+                    <span style="margin: 0 15px;">•</span>
+                    <span style="color: #3b82f6; font-weight: bold;">� Democrat Spending</span>
+                    <span style="margin: 0 15px;">•</span>
+                    <span style="color: #16a34a; font-weight: bold;">� Federal Revenue</span>
                 </div>
-                <div class="chart-container">
-                    <canvas id="spendingChart"></canvas>
+                <div class="chart-container" style="height: 500px;">
+                    <canvas id="comprehensiveChart"></canvas>
                 </div>
             </div>
 
@@ -648,275 +644,197 @@
             }
         }
 
-        // Initialize Chart.js debt visualization
-        async function initializeChart() {
-            const ctx = document.getElementById('debtChart');
+        // Initialize comprehensive fiscal chart with all data
+        async function initializeComprehensiveChart() {
+            const ctx = document.getElementById('comprehensiveChart');
             if (!ctx) return;
             
             try {
-                if (liveData.debtHistory && liveData.debtHistory.length > 0) {
-                    const labels = liveData.debtHistory.map(d => d.year);
-                    const totalDebt = liveData.debtHistory.map(d => d.debt_amount / 1000000000000);
-                    const annualIncrease = liveData.debtHistory.map(d => d.annual_increase / 1000000000);
-                    
-                    new Chart(ctx, {
-                        type: 'line',
-                        data: {
-                            labels: labels,
-                            datasets: [
-                                {
-                                    label: 'National Debt ($T)',
-                                    data: totalDebt,
-                                    borderColor: '#ff4757',
-                                    backgroundColor: 'rgba(255, 71, 87, 0.1)',
-                                    fill: true,
-                                    tension: 0.2,
-                                    yAxisID: 'y'
-                                },
-                                {
-                                    label: 'Annual Increase ($B)',
-                                    data: annualIncrease,
-                                    borderColor: '#ffa502',
-                                    backgroundColor: 'rgba(255, 165, 2, 0.1)',
-                                    fill: false,
-                                    tension: 0.2,
-                                    yAxisID: 'y1'
-                                }
-                            ]
-                        },
-                        options: {
-                            responsive: true,
-                            plugins: {
-                                title: {
-                                    display: true,
-                                    text: 'DEBT GROWTH TRAJECTORY (20 Years: 2005-2025)',
-                                    color: '#ffffff',
-                                    font: { size: 16, weight: 'bold' }
-                                },
-                                legend: {
-                                    labels: {
-                                        color: '#ffffff',
-                                        font: { size: 12 }
-                                    }
-                                }
-                            },
-                            scales: {
-                                x: {
-                                    ticks: {
-                                        color: '#ffffff',
-                                        maxRotation: 45,
-                                        minRotation: 45
-                                    },
-                                    grid: {
-                                        color: 'rgba(255, 255, 255, 0.1)'
-                                    }
-                                },
-                                y: {
-                                    type: 'linear',
-                                    display: true,
-                                    position: 'left',
-                                    ticks: {
-                                        color: '#ff4757',
-                                        callback: function(value) {
-                                            return '$' + value.toFixed(1) + 'T';
-                                        }
-                                    },
-                                    grid: {
-                                        color: 'rgba(255, 71, 87, 0.2)'
-                                    },
-                                    title: {
-                                        display: true,
-                                        text: 'Total Debt ($T)',
-                                        color: '#ff4757'
-                                    }
-                                },
-                                y1: {
-                                    type: 'linear',
-                                    display: true,
-                                    position: 'right',
-                                    ticks: {
-                                        color: '#ffa502',
-                                        callback: function(value) {
-                                            return '$' + value.toFixed(0) + 'B';
-                                        }
-                                    },
-                                    grid: {
-                                        drawOnChartArea: false,
-                                        color: 'rgba(255, 165, 2, 0.2)'
-                                    },
-                                    title: {
-                                        display: true,
-                                        text: 'Annual Increase ($B)',
-                                        color: '#ffa502'
-                                    }
-                                }
-                            }
-                        }
-                    });
-                }
-            } catch (error) {
-                // Production fallback
-                if (ctx.getContext) {
-                    new Chart(ctx, {
-                        type: 'line',
-                        data: {
-                            labels: ['2005', '2006', '2007', '2008', '2009', '2010', '2011', '2012', '2013', '2014', '2015', '2016', '2017', '2018', '2019', '2020', '2021', '2022', '2023', '2024', '2025'],
-                            datasets: [{
-                                label: 'National Debt ($T)',
-                                data: [7.9, 8.5, 9.0, 10.7, 12.3, 14.0, 15.2, 16.4, 17.4, 18.1, 18.9, 20.0, 20.5, 22.0, 23.2, 26.9, 29.6, 31.4, 34.0, 35.0, 35.7],
-                                borderColor: '#ff4757',
-                                backgroundColor: 'rgba(255, 71, 87, 0.1)',
-                                fill: true,
-                                tension: 0.2
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            plugins: {
-                                title: {
-                                    display: true,
-                                    text: 'DEBT GROWTH TRAJECTORY (20 Years: 2005-2025)',
-                                    color: '#ffffff',
-                                    font: { size: 16, weight: 'bold' }
-                                },
-                                legend: {
-                                    labels: { color: '#ffffff' }
-                                }
-                            },
-                            scales: {
-                                x: {
-                                    ticks: { 
-                                        color: '#ffffff',
-                                        maxRotation: 45,
-                                        minRotation: 45
-                                    },
-                                    grid: { color: 'rgba(255, 255, 255, 0.1)' }
-                                },
-                                y: {
-                                    ticks: { 
-                                        color: '#ff4757',
-                                        callback: function(value) {
-                                            return '$' + value.toFixed(1) + 'T';
-                                        }
-                                    },
-                                    grid: { color: 'rgba(255, 71, 87, 0.2)' },
-                                    title: {
-                                        display: true,
-                                        text: 'National Debt ($T)',
-                                        color: '#ff4757'
-                                    }
-                                }
-                            }
-                        }
-                    });
-                }
-            }
-        }
-
-        // Initialize Presidential Spending Chart
-        async function initializeSpendingChart() {
-            const ctx = document.getElementById('spendingChart');
-            if (!ctx) return;
-            
-            try {
-                // Create color array based on political party
-                const backgroundColors = presidentialSpending.map(item => 
-                    item.party === 'R' ? 'rgba(220, 38, 38, 0.7)' : 'rgba(59, 130, 246, 0.7)'
+                // Create party-colored backgrounds for spending bars
+                const spendingBackgroundColors = presidentialSpending.map(item => 
+                    item.party === 'R' ? 'rgba(220, 38, 38, 0.6)' : 'rgba(59, 130, 246, 0.6)'
                 );
-                const borderColors = presidentialSpending.map(item => 
+                const spendingBorderColors = presidentialSpending.map(item => 
                     item.party === 'R' ? '#dc2626' : '#3b82f6'
                 );
+
+                let datasets = [];
+                let labels = presidentialSpending.map(d => d.year);
                 
-                new Chart(ctx, {
+                // Check if we have live debt data
+                if (liveData.debtHistory && liveData.debtHistory.length > 0) {
+                    const totalDebt = liveData.debtHistory.map(d => d.debt_amount / 1000000000000);
+                    datasets.push({
+                        label: 'National Debt ($T)',
+                        data: totalDebt,
+                        type: 'line',
+                        borderColor: '#ff4757',
+                        backgroundColor: 'rgba(255, 71, 87, 0.1)',
+                        fill: '+1',
+                        tension: 0.3,
+                        yAxisID: 'y',
+                        pointRadius: 3,
+                        pointHoverRadius: 6,
+                        order: 1
+                    });
+                } else {
+                    // Fallback debt data
+                    const fallbackDebt = [7.9, 8.5, 9.0, 10.7, 12.3, 14.0, 15.2, 16.4, 17.4, 18.1, 18.9, 20.0, 20.5, 22.0, 23.2, 26.9, 29.6, 31.4, 34.0, 35.0, 35.7];
+                    datasets.push({
+                        label: 'National Debt ($T)',
+                        data: fallbackDebt,
+                        type: 'line',
+                        borderColor: '#ff4757',
+                        backgroundColor: 'rgba(255, 71, 87, 0.1)',
+                        fill: '+2',
+                        tension: 0.3,
+                        yAxisID: 'y',
+                        pointRadius: 3,
+                        pointHoverRadius: 6,
+                        order: 1
+                    });
+                }
+
+                // Add federal spending bars with party colors
+                datasets.push({
+                    label: 'Federal Spending ($T)',
+                    data: presidentialSpending.map(d => d.spending),
                     type: 'bar',
+                    backgroundColor: spendingBackgroundColors,
+                    borderColor: spendingBorderColors,
+                    borderWidth: 2,
+                    yAxisID: 'y',
+                    order: 3
+                });
+
+                // Add federal revenue line
+                datasets.push({
+                    label: 'Federal Revenue ($T)',
+                    data: federalRevenue.map(d => d.revenue),
+                    type: 'line',
+                    borderColor: '#16a34a',
+                    backgroundColor: 'rgba(22, 163, 74, 0.1)',
+                    fill: false,
+                    tension: 0.3,
+                    yAxisID: 'y',
+                    pointRadius: 4,
+                    pointHoverRadius: 7,
+                    pointBackgroundColor: '#16a34a',
+                    pointBorderColor: '#ffffff',
+                    pointBorderWidth: 2,
+                    order: 2
+                });
+
+                new Chart(ctx, {
+                    type: 'line',
                     data: {
-                        labels: presidentialSpending.map(d => d.year),
-                        datasets: [{
-                            label: 'Federal Spending ($T)',
-                            data: presidentialSpending.map(d => d.spending),
-                            backgroundColor: backgroundColors,
-                            borderColor: borderColors,
-                            borderWidth: 2
-                        }, {
-                            label: 'Federal Revenue ($T)',
-                            data: federalRevenue.map(d => d.revenue),
-                            type: 'line',
-                            borderColor: '#16a34a',
-                            backgroundColor: 'rgba(22, 163, 74, 0.1)',
-                            fill: false,
-                            tension: 0.2,
-                            pointBackgroundColor: '#16a34a',
-                            pointBorderColor: '#16a34a',
-                            pointRadius: 4
-                        }]
+                        labels: labels,
+                        datasets: datasets
                     },
                     options: {
                         responsive: true,
+                        maintainAspectRatio: false,
                         plugins: {
                             title: {
                                 display: true,
-                                text: 'Federal Spending & Revenue by President (2005-2025)',
+                                text: 'U.S. FISCAL ANALYSIS: Debt, Spending & Revenue by Presidential Term (2005-2025)',
                                 color: '#ffffff',
-                                font: { size: 16, weight: 'bold' }
+                                font: { size: 16, weight: 'bold' },
+                                padding: { bottom: 20 }
                             },
                             legend: {
                                 display: true,
+                                position: 'top',
                                 labels: {
-                                    color: '#ffffff'
+                                    color: '#ffffff',
+                                    font: { size: 11 },
+                                    usePointStyle: true,
+                                    padding: 15
                                 }
                             },
                             tooltip: {
+                                mode: 'index',
+                                intersect: false,
+                                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                                titleColor: '#ffffff',
+                                bodyColor: '#ffffff',
+                                borderColor: 'rgba(255, 255, 255, 0.2)',
+                                borderWidth: 1,
                                 callbacks: {
                                     title: function(context) {
                                         const dataIndex = context[0].dataIndex;
-                                        return presidentialSpending[dataIndex].president;
+                                        return `${presidentialSpending[dataIndex].year} - ${presidentialSpending[dataIndex].president}`;
+                                    },
+                                    afterTitle: function(context) {
+                                        const dataIndex = context[0].dataIndex;
+                                        const party = presidentialSpending[dataIndex].party === 'R' ? 'Republican' : 'Democrat';
+                                        return `Party: ${party}`;
                                     },
                                     label: function(context) {
-                                        if (context.datasetIndex === 0) {
-                                            return `Spending: $${context.parsed.y.toFixed(2)}T`;
-                                        } else {
-                                            return `Revenue: $${context.parsed.y.toFixed(2)}T`;
-                                        }
+                                        const value = context.parsed.y;
+                                        const datasetLabel = context.dataset.label;
+                                        return `${datasetLabel}: $${value.toFixed(2)}T`;
                                     },
-                                    afterLabel: function(context) {
-                                        if (context.datasetIndex === 0) {
-                                            const dataIndex = context.dataIndex;
-                                            const party = presidentialSpending[dataIndex].party === 'R' ? 'Republican' : 'Democrat';
-                                            const spending = presidentialSpending[dataIndex].spending;
-                                            const revenue = federalRevenue[dataIndex].revenue;
-                                            const deficit = spending - revenue;
-                                            return [`Party: ${party}`, `Deficit: $${deficit.toFixed(2)}T`];
-                                        }
-                                        return '';
+                                    afterBody: function(context) {
+                                        const dataIndex = context[0].dataIndex;
+                                        const spending = presidentialSpending[dataIndex].spending;
+                                        const revenue = federalRevenue[dataIndex].revenue;
+                                        const deficit = spending - revenue;
+                                        return [
+                                            '',
+                                            `📊 Fiscal Summary:`,
+                                            `Deficit: $${deficit.toFixed(2)}T`,
+                                            `Deficit Rate: ${((deficit/spending) * 100).toFixed(1)}%`
+                                        ];
                                     }
                                 }
                             }
+                        },
+                        interaction: {
+                            mode: 'index',
+                            intersect: false
                         },
                         scales: {
                             x: {
                                 ticks: {
                                     color: '#ffffff',
                                     maxRotation: 45,
-                                    minRotation: 45
+                                    minRotation: 45,
+                                    font: { size: 10 }
                                 },
                                 grid: {
-                                    color: 'rgba(255, 255, 255, 0.1)'
+                                    color: 'rgba(255, 255, 255, 0.1)',
+                                    lineWidth: 0.5
+                                },
+                                title: {
+                                    display: true,
+                                    text: 'Presidential Terms (2005-2025)',
+                                    color: '#ffffff',
+                                    font: { size: 12 }
                                 }
                             },
                             y: {
+                                type: 'linear',
+                                display: true,
+                                position: 'left',
+                                beginAtZero: false,
+                                min: 0,
                                 ticks: {
                                     color: '#ffffff',
                                     callback: function(value) {
                                         return '$' + value.toFixed(1) + 'T';
-                                    }
+                                    },
+                                    font: { size: 10 }
                                 },
                                 grid: {
-                                    color: 'rgba(255, 255, 255, 0.1)'
+                                    color: 'rgba(255, 255, 255, 0.1)',
+                                    lineWidth: 0.5
                                 },
                                 title: {
                                     display: true,
-                                    text: 'Amount ($T)',
-                                    color: '#ffffff'
+                                    text: 'Amount (Trillions USD)',
+                                    color: '#ffffff',
+                                    font: { size: 12 }
                                 }
                             }
                         }
@@ -924,44 +842,47 @@
                 });
                 
             } catch (error) {
-                // Production fallback - simple chart
+                // Fallback comprehensive chart
                 if (ctx.getContext) {
                     new Chart(ctx, {
-                        type: 'bar',
+                        type: 'line',
                         data: {
-                            labels: ['Bush 05-08', 'Obama 09-16', 'Trump 17-20', 'Biden 21-25'],
+                            labels: ['2005', '2010', '2015', '2020', '2025'],
                             datasets: [{
-                                label: 'Avg Spending ($T)',
-                                data: [2.71, 3.58, 4.77, 6.68],
-                                backgroundColor: ['rgba(220, 38, 38, 0.7)', 'rgba(59, 130, 246, 0.7)', 'rgba(220, 38, 38, 0.7)', 'rgba(59, 130, 246, 0.7)'],
-                                borderColor: ['#dc2626', '#3b82f6', '#dc2626', '#3b82f6'],
-                                borderWidth: 2
+                                label: 'National Debt ($T)',
+                                data: [7.9, 14.0, 18.9, 26.9, 35.7],
+                                type: 'line',
+                                borderColor: '#ff4757',
+                                backgroundColor: 'rgba(255, 71, 87, 0.1)',
+                                fill: false,
+                                tension: 0.3
                             }, {
-                                label: 'Avg Revenue ($T)',
-                                data: [2.39, 2.96, 3.45, 4.63],
+                                label: 'Federal Spending ($T)',
+                                data: [2.5, 3.5, 3.7, 6.6, 7.1],
+                                type: 'bar',
+                                backgroundColor: 'rgba(220, 38, 38, 0.6)',
+                                borderColor: '#dc2626'
+                            }, {
+                                label: 'Federal Revenue ($T)',
+                                data: [2.2, 2.2, 3.3, 3.4, 5.2],
                                 type: 'line',
                                 borderColor: '#16a34a',
-                                backgroundColor: 'rgba(22, 163, 74, 0.1)',
                                 fill: false,
-                                tension: 0.2,
-                                pointBackgroundColor: '#16a34a',
-                                pointBorderColor: '#16a34a',
-                                pointRadius: 6
+                                tension: 0.3
                             }]
                         },
                         options: {
                             responsive: true,
+                            maintainAspectRatio: false,
                             plugins: {
                                 title: {
                                     display: true,
-                                    text: 'Federal Spending & Revenue by President',
-                                    color: '#ffffff'
+                                    text: 'U.S. Fiscal Overview (5-Year Snapshot)',
+                                    color: '#ffffff',
+                                    font: { size: 16, weight: 'bold' }
                                 },
-                                legend: { 
-                                    display: true,
-                                    labels: {
-                                        color: '#ffffff'
-                                    }
+                                legend: {
+                                    labels: { color: '#ffffff' }
                                 }
                             },
                             scales: {
@@ -983,7 +904,9 @@
                     });
                 }
             }
-        }        // Animate numbers function
+        }
+
+        // Animate numbers function
         function animateNumber(element, target, duration = 2000, prefix = '$', suffix = '') {
             const start = parseFloat(element.textContent.replace(/[^0-9.-]+/g, '')) || 0;
             const increment = (target - start) / (duration / 16);
@@ -1136,8 +1059,7 @@
             // Initialize chart with real data
             setTimeout(async () => {
                 if (typeof Chart !== 'undefined') {
-                    await initializeChart();
-                    await initializeSpendingChart();
+                    await initializeComprehensiveChart();
                 }
             }, 500);
             
