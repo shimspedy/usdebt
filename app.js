@@ -51,7 +51,7 @@ class FiscalDashboard {
    * Initialize chart after ensuring Chart.js is loaded
    */
   async initializeChart() {
-    console.log('🚀 FiscalDashboard: initializeChart() called');
+  // initializeChart() called
     
     // Wait for Chart.js to be available
     let attempts = 0;
@@ -61,16 +61,16 @@ class FiscalDashboard {
     }
     
     if (typeof Chart === 'undefined') {
-      console.error('❌ Chart.js failed to load after waiting 5 seconds');
+      // Chart.js failed to load after waiting 5 seconds
       return;
     }
     
-    console.log('✅ Chart.js version:', Chart.version);
-    console.log('🎯 FiscalDashboard: Creating DebtChart...');
+  // Chart.js version loaded
+  // Creating DebtChart...
     this.debtChart = new DebtChart('debtChart');
-    console.log('🎯 FiscalDashboard: Calling debtChart.init()...');
-    await this.debtChart.init();
-    console.log('✅ FiscalDashboard: Chart initialization complete');
+  // Calling debtChart.init()...
+  await this.debtChart.init();
+  // Chart initialization complete
   }
 
   /**

@@ -155,7 +155,7 @@ class Utils {
    * @param {Error} error - Error object
    */
   static logError(context, error) {
-    console.error(`[${context}]`, error);
+  // Error: [context] error
   }
 
   /**

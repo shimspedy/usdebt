@@ -459,7 +459,7 @@
                         liveData.populationSource = `World Bank API (${dataYear} + growth)`;
                     }
                 } catch (popError) {
-                    console.warn('World Bank population API failed, using demographic estimates');
+                    // World Bank population API failed, using demographic estimates
                     liveData.population = 336800000; // 2023 Census estimate
                     liveData.populationSource = '2023 Census estimate';
                 }
@@ -478,7 +478,7 @@
                         liveData.gdpSource = `World Bank API (${dataYear} + growth)`;
                     }
                 } catch (gdpError) {
-                    console.warn('World Bank GDP API failed, using BEA estimates');
+                    // World Bank GDP API failed, using BEA estimates
                     liveData.gdpEstimate = 27360935000000; // 2023 BEA estimate
                     liveData.gdpSource = '2023 BEA estimate';
                 }
@@ -489,7 +489,7 @@
                     liveData.interestRate = 0.047; // 4.7% - current 10-year Treasury average from official sources
                     liveData.interestSource = 'Treasury official rates (current)';
                 } catch (rateError) {
-                    console.warn('Treasury rate API failed, using current market rate');
+                    // Treasury rate API failed, using current market rate
                     liveData.interestRate = 0.047; // Current average federal rate from market data
                     liveData.interestSource = 'Treasury market rate estimate';
                 }
@@ -501,8 +501,6 @@
                 if (!liveData.populationSource) liveData.populationSource = 'World Bank API (2024)';
                 if (!liveData.gdpSource) liveData.gdpSource = 'World Bank API (2024)';
                 if (!liveData.interestSource) liveData.interestSource = 'Treasury official rates';
-                
-                console.log('✅ API data loaded successfully:', liveData);
                 
                 // Process Treasury debt data
                 if (debtData?.data?.[0]) {
@@ -529,7 +527,7 @@
                 return liveData;
                 
             } catch (error) {
-                console.error('API fetch error:', error);
+                // API fetch error
                 // Emergency fallback with real data sources noted
                 liveData.currentDebt = 37454537246248.71; // Latest known real debt from Treasury
                 liveData.population = 336800000; // 2023 Census Bureau estimate
@@ -551,158 +549,155 @@
             }
         }
 
-        // Initialize chart with real data
+        // Initialize Chart.js debt visualization
         async function initializeChart() {
-            console.log('🎯 Chart initialization started');
-            console.log('📊 Available debt history:', liveData.debtHistory);
+            const ctx = document.getElementById('debtChart');
+            if (!ctx) return;
             
-            const ctx = document.getElementById('debtChart').getContext('2d');
-            
-            // Ensure we have debt history data
-            if (!liveData.debtHistory || liveData.debtHistory.length === 0) {
-                console.warn('⚠️ No debt history data, using fallback');
-                liveData.debtHistory = [
-                    { year: 2021, debt: 29617214856051.75, annual_increase: 0 },
-                    { year: 2022, debt: 31419689421557.9, annual_increase: 1802474565506.15 },
-                    { year: 2023, debt: 34001493655565.48, annual_increase: 2581804234007.58 },
-                    { year: 2024, debt: 36218605311689.91, annual_increase: 2217111656124.43 },
-                    { year: 2025, debt: 37454537246248.71, annual_increase: 1235931934558.80 }
-                ];
-            }
-            
-            // Process historical data for chart
-            const chartData = liveData.debtHistory.map(record => ({
-                year: record.year,
-                debt: record.debt / 1000000000000, // Convert to trillions
-                increase: (record.annual_increase || 0) / 1000000000000 // Convert to trillions
-            }));
-
-            console.log('📈 Chart data prepared:', chartData);
-
             try {
-                const chart = new Chart(ctx, {
-                    type: 'line',
-                    data: {
-                        labels: chartData.map(d => d.year),
-                        datasets: [{
-                            label: 'Total National Debt (Trillions)',
-                            data: chartData.map(d => d.debt),
-                            borderColor: '#ef4444',
-                            backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                            borderWidth: 4,
-                            pointRadius: 8,
-                            pointHoverRadius: 12,
-                            pointBackgroundColor: '#ef4444',
-                            pointBorderColor: '#ffffff',
-                            pointBorderWidth: 2,
-                            tension: 0.4,
-                            fill: true,
-                            yAxisID: 'y'
-                        }, {
-                            label: 'Annual Increase (Trillions)',
-                            data: chartData.map(d => d.increase),
-                            type: 'bar',
-                            backgroundColor: 'rgba(59, 130, 246, 0.7)',
-                            borderColor: '#3b82f6',
-                            borderWidth: 2,
-                            yAxisID: 'y1'
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: {
-                                display: true,
-                                position: 'top',
-                                labels: {
-                                    color: '#ffffff',
-                                    font: { size: 14, weight: 'bold' },
-                                    padding: 20
-                                }
-                            },
-                            tooltip: {
-                                backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                                titleColor: '#ffffff',
-                                bodyColor: '#ffffff',
-                                borderColor: '#ef4444',
-                                borderWidth: 1,
-                                cornerRadius: 8,
-                                displayColors: true
-                            }
-                        },
-                        scales: {
-                            x: {
-                                grid: {
-                                    color: 'rgba(255, 255, 255, 0.1)',
-                                    drawBorder: false
+                if (liveData.debtHistory && liveData.debtHistory.length > 0) {
+                    const labels = liveData.debtHistory.map(d => d.year);
+                    const totalDebt = liveData.debtHistory.map(d => d.debt_amount / 1000000000000);
+                    const annualIncrease = liveData.debtHistory.map(d => d.annual_increase / 1000000000);
+                    
+                    new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: labels,
+                            datasets: [
+                                {
+                                    label: 'Total Debt (Trillions)',
+                                    data: totalDebt,
+                                    borderColor: '#ff4757',
+                                    backgroundColor: 'rgba(255, 71, 87, 0.1)',
+                                    fill: true,
+                                    tension: 0.2,
+                                    yAxisID: 'y'
                                 },
-                                ticks: {
-                                    color: '#94a3b8',
-                                    font: { size: 12, weight: 'bold' }
+                                {
+                                    label: 'Annual Increase (Billions)',
+                                    data: annualIncrease,
+                                    borderColor: '#ffa502',
+                                    backgroundColor: 'rgba(255, 165, 2, 0.1)',
+                                    fill: false,
+                                    tension: 0.2,
+                                    yAxisID: 'y1'
                                 }
-                            },
-                            y: {
-                                type: 'linear',
-                                display: true,
-                                position: 'left',
+                            ]
+                        },
+                        options: {
+                            responsive: true,
+                            plugins: {
                                 title: {
                                     display: true,
-                                    text: 'Total Debt (Trillions $)',
-                                    color: '#ef4444',
-                                    font: { size: 14, weight: 'bold' }
+                                    text: 'US National Debt Growth (Treasury Data)',
+                                    color: '#ffffff'
                                 },
-                                grid: {
-                                    color: 'rgba(239, 68, 68, 0.2)',
-                                    drawBorder: false
-                                },
-                                ticks: {
-                                    color: '#ef4444',
-                                    font: { size: 11, weight: 'bold' },
-                                    callback: function(value) {
-                                        return '$' + value + 'T';
+                                legend: {
+                                    labels: {
+                                        color: '#ffffff'
                                     }
                                 }
                             },
-                            y1: {
-                                type: 'linear',
-                                display: true,
-                                position: 'right',
-                                title: {
+                            scales: {
+                                x: {
+                                    ticks: {
+                                        color: '#ffffff'
+                                    },
+                                    grid: {
+                                        color: 'rgba(255, 255, 255, 0.1)'
+                                    }
+                                },
+                                y: {
+                                    type: 'linear',
                                     display: true,
-                                    text: 'Annual Increase (Trillions $)',
-                                    color: '#3b82f6',
-                                    font: { size: 14, weight: 'bold' }
+                                    position: 'left',
+                                    ticks: {
+                                        color: '#ff4757',
+                                        callback: function(value) {
+                                            return '$' + value.toFixed(1) + 'T';
+                                        }
+                                    },
+                                    grid: {
+                                        color: 'rgba(255, 71, 87, 0.2)'
+                                    },
+                                    title: {
+                                        display: true,
+                                        text: 'Total Debt (Trillions)',
+                                        color: '#ff4757'
+                                    }
                                 },
-                                grid: {
-                                    drawOnChartArea: false,
-                                    color: 'rgba(59, 130, 246, 0.2)'
-                                },
-                                ticks: {
-                                    color: '#3b82f6',
-                                    font: { size: 11, weight: 'bold' },
-                                    callback: function(value) {
-                                        return '+$' + value + 'T';
+                                y1: {
+                                    type: 'linear',
+                                    display: true,
+                                    position: 'right',
+                                    ticks: {
+                                        color: '#ffa502',
+                                        callback: function(value) {
+                                            return '$' + value.toFixed(0) + 'B';
+                                        }
+                                    },
+                                    grid: {
+                                        drawOnChartArea: false,
+                                        color: 'rgba(255, 165, 2, 0.2)'
+                                    },
+                                    title: {
+                                        display: true,
+                                        text: 'Annual Increase (Billions)',
+                                        color: '#ffa502'
                                     }
                                 }
                             }
-                        },
-                        interaction: {
-                            intersect: false,
-                            mode: 'index'
                         }
-                    }
-                });
-
-                console.log('✅ Chart created successfully:', chart);
-                return chart;
-            } catch (chartError) {
-                console.error('❌ Chart creation failed:', chartError);
-                return null;
+                    });
+                }
+            } catch (error) {
+                // Production fallback
+                if (ctx.getContext) {
+                    new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: ['2020', '2021', '2022', '2023', '2024'],
+                            datasets: [{
+                                label: 'Total Debt (Trillions)',
+                                data: [26.9, 28.4, 30.9, 33.2, 35.5],
+                                borderColor: '#ff4757',
+                                backgroundColor: 'rgba(255, 71, 87, 0.1)',
+                                fill: true
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            plugins: {
+                                title: {
+                                    display: true,
+                                    text: 'US National Debt Growth (Estimated)',
+                                    color: '#ffffff'
+                                },
+                                legend: {
+                                    labels: { color: '#ffffff' }
+                                }
+                            },
+                            scales: {
+                                x: {
+                                    ticks: { color: '#ffffff' },
+                                    grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                                },
+                                y: {
+                                    ticks: { 
+                                        color: '#ff4757',
+                                        callback: function(value) {
+                                            return '$' + value.toFixed(1) + 'T';
+                                        }
+                                    },
+                                    grid: { color: 'rgba(255, 71, 87, 0.2)' }
+                                }
+                            }
+                        }
+                    });
+                }
             }
-        }
-
-        // Animate numbers function
+        }        // Animate numbers function
         function animateNumber(element, target, duration = 2000, prefix = '$', suffix = '') {
             const start = parseFloat(element.textContent.replace(/[^0-9.-]+/g, '')) || 0;
             const increment = (target - start) / (duration / 16);
