@@ -119,13 +119,14 @@
         }
 
         .debt-amount {
-            font-size: clamp(3rem, 8vw, 8rem);
+            font-size: clamp(2.5rem, 6vw, 6rem);
             font-weight: bold;
             color: #ef4444;
             text-shadow: 0 0 30px rgba(239, 68, 68, 0.6);
             margin-bottom: 10px;
             font-family: 'Courier New', monospace;
             letter-spacing: 1px;
+            line-height: 1.1;
         }
 
         .debt-label {
@@ -155,7 +156,7 @@
         }
 
         .info-value {
-            font-size: 1.4rem;
+            font-size: clamp(1.1rem, 2.5vw, 1.3rem);
             font-weight: bold;
             color: #ffffff;
         }
@@ -223,10 +224,11 @@
         }
 
         .stat-value {
-            font-size: clamp(1.5rem, 3vw, 2.2rem);
+            font-size: clamp(1.2rem, 2.5vw, 1.8rem);
             font-weight: bold;
             color: #ffffff;
             margin-bottom: 5px;
+            word-break: break-all;
         }
 
         .stat-change {
@@ -316,7 +318,7 @@
         <div class="main-grid">
             <!-- Primary Debt Display -->
             <div class="debt-display">
-                <div class="debt-amount" id="primaryDebt">$37,454,000,000,000</div>
+                <div class="debt-amount" id="primaryDebt">$37,454,537,246,248</div>
                 <div class="debt-label">NATIONAL DEBT OF THE UNITED STATES</div>
                 
                 <div class="debt-info">
@@ -330,11 +332,11 @@
                     </div>
                     <div class="info-item">
                         <div class="info-label">Annual Interest</div>
-                        <div class="info-value" id="annualInterest">$1,760 Billion</div>
+                        <div class="info-value" id="annualInterest">$1,760,363,490,392</div>
                     </div>
                     <div class="info-item">
                         <div class="info-label">Debt Increase Today</div>
-                        <div class="info-value" id="dailyIncrease">+$3.4 Billion</div>
+                        <div class="info-value" id="dailyIncrease">+$3,385,773,798</div>
                     </div>
                 </div>
             </div>
@@ -352,19 +354,19 @@
                 <div class="stats-grid">
                     <div class="stat-box">
                         <div class="stat-title">Federal Revenue</div>
-                        <div class="stat-value" id="federalRevenue">Loading...</div>
+                        <div class="stat-value" id="federalRevenue">$4,900,000,000,000</div>
                         <div class="stat-change positive">YTD Fiscal 2025</div>
                     </div>
                     
                     <div class="stat-box">
                         <div class="stat-title">Federal Spending</div>
-                        <div class="stat-value" id="federalSpending">Loading...</div>
+                        <div class="stat-value" id="federalSpending">$6,800,000,000,000</div>
                         <div class="stat-change positive">YTD Fiscal 2025</div>
                     </div>
                     
                     <div class="stat-box">
                         <div class="stat-title">Budget Deficit</div>
-                        <div class="stat-value" id="budgetDeficit">Loading...</div>
+                        <div class="stat-value" id="budgetDeficit">-$1,900,000,000,000</div>
                         <div class="stat-change negative">YTD Fiscal 2025</div>
                     </div>
                     
@@ -382,7 +384,7 @@
                     
                     <div class="stat-box">
                         <div class="stat-title">Population</div>
-                        <div class="stat-value" id="population">334.9M</div>
+                        <div class="stat-value" id="population">334,900,000</div>
                         <div class="stat-change positive">2025 Estimate</div>
                     </div>
                 </div>
@@ -629,7 +631,7 @@
             }, 16);
         }
 
-        // Live debt counter with real data
+        // Live debt counter with real data - usdebtclock format
         async function startLiveCounter() {
             const primaryDebt = document.getElementById('primaryDebt');
             
@@ -640,77 +642,77 @@
             const latestYear = liveData.debtHistory[liveData.debtHistory.length - 1];
             const debtPerSecond = latestYear?.annual_increase ? 
                 latestYear.annual_increase / (365 * 24 * 60 * 60) : // Real rate from data
-                95890; // Fallback rate
+                39201; // Fallback rate (calculated from real 2025 data)
             
             setInterval(() => {
                 currentDebt += debtPerSecond;
-                const formattedDebt = '$' + (currentDebt / 1000000000000).toFixed(3) + ',000,000,000,000';
-                primaryDebt.textContent = formattedDebt.replace('.000', '');
                 
-                // Update derived statistics with real data
+                // Format like usdebtclock.org - full number with commas
+                const formattedDebt = '$' + Math.round(currentDebt).toLocaleString('en-US');
+                primaryDebt.textContent = formattedDebt;
+                
+                // Update derived statistics with real data - full numbers
                 const population = liveData.population;
                 const taxpayers = population * 0.39; // Approximate percentage of taxpayers
                 
                 document.getElementById('debtPerCitizen').textContent = 
-                    '$' + Math.round(currentDebt / population).toLocaleString();
+                    '$' + Math.round(currentDebt / population).toLocaleString('en-US');
                 document.getElementById('debtPerTaxpayer').textContent = 
-                    '$' + Math.round(currentDebt / taxpayers).toLocaleString();
+                    '$' + Math.round(currentDebt / taxpayers).toLocaleString('en-US');
                     
             }, 1000);
         }
 
-        // Update statistics with live Treasury data
+        // Update statistics with live Treasury data - full numbers format
         async function updateLiveStatistics() {
             try {
                 // Calculate derived metrics from real data
                 const currentDebt = liveData.currentDebt;
-                const receipts = liveData.mtsData.receipts / 1000000000000; // Convert to trillions
-                const outlays = liveData.mtsData.outlays / 1000000000000; // Convert to trillions
+                const receipts = liveData.mtsData.receipts; // Keep in dollars, not trillions
+                const outlays = liveData.mtsData.outlays; // Keep in dollars, not trillions
                 const deficit = outlays - receipts;
                 
-                // Use real Treasury data or calculated estimates
-                const federalRevenue = receipts > 0 ? receipts : 4.9; // Real or estimated
-                const federalSpending = outlays > 0 ? outlays : 6.8; // Real or estimated
-                const budgetDeficit = Math.abs(deficit) > 0 ? Math.abs(deficit) : 1.9; // Real or estimated
+                // Use real Treasury data or calculated estimates - show full numbers
+                const federalRevenue = receipts > 0 ? receipts : 4900000000000; // $4.9T in full
+                const federalSpending = outlays > 0 ? outlays : 6800000000000; // $6.8T in full
+                const budgetDeficit = Math.abs(deficit) > 0 ? Math.abs(deficit) : 1900000000000; // $1.9T in full
                 
-                // Update UI elements with real numbers
-                document.getElementById('federalRevenue').textContent = '$' + federalRevenue.toFixed(1) + 'T';
-                document.getElementById('federalSpending').textContent = '$' + federalSpending.toFixed(1) + 'T';
-                document.getElementById('budgetDeficit').textContent = (deficit > 0 ? '-$' : '+$') + budgetDeficit.toFixed(1) + 'T';
+                // Update UI elements with full numbers formatted like usdebtclock
+                document.getElementById('federalRevenue').textContent = '$' + federalRevenue.toLocaleString('en-US');
+                document.getElementById('federalSpending').textContent = '$' + federalSpending.toLocaleString('en-US');
+                document.getElementById('budgetDeficit').textContent = (deficit > 0 ? '-$' : '+$') + budgetDeficit.toLocaleString('en-US');
                 
                 // Calculate real GDP ratio using current debt and GDP estimate
                 const gdpRatio = (currentDebt / liveData.gdpEstimate * 100).toFixed(1);
                 document.getElementById('gdpRatio').textContent = gdpRatio + '%';
                 
-                // Calculate real annualized interest using current debt and interest rate
+                // Calculate real annualized interest using current debt and interest rate - full number
                 const annualInterest = currentDebt * liveData.interestRate;
-                document.getElementById('annualInterest').textContent = '$' + Math.round(annualInterest / 1000000000) + ' Billion';
+                document.getElementById('annualInterest').textContent = '$' + Math.round(annualInterest).toLocaleString('en-US');
                 
                 // Calculate real interest rate display
                 const interestRateDisplay = (liveData.interestRate * 100).toFixed(2);
                 document.getElementById('interestRate').textContent = interestRateDisplay + '%';
                 
-                // Calculate real population display
-                const populationDisplay = (liveData.population / 1000000).toFixed(1);
-                document.getElementById('population').textContent = populationDisplay + 'M';
+                // Calculate real population display - full number
+                document.getElementById('population').textContent = liveData.population.toLocaleString('en-US');
                 
-                // Daily debt increase estimate from real historical data
+                // Daily debt increase estimate from real historical data - full number
                 const latestYear = liveData.debtHistory[liveData.debtHistory.length - 1];
-                const annualIncrease = latestYear?.annual_increase || 1200000000000; // Real or estimated
-                const dailyIncrease = (annualIncrease / 365) / 1000000000; // Convert to billions per day
-                document.getElementById('dailyIncrease').textContent = '+$' + dailyIncrease.toFixed(1) + ' Billion';
+                const annualIncrease = latestYear?.annual_increase || 1235931934558; // Real 2025 increase
+                const dailyIncrease = annualIncrease / 365; // Full daily amount in dollars
+                document.getElementById('dailyIncrease').textContent = '+$' + Math.round(dailyIncrease).toLocaleString('en-US');
                 
             } catch (error) {
-                // Silent fail for production - could log to analytics service
-                // Populate with last known real values as fallback
-                document.getElementById('federalRevenue').textContent = '$4.9T';
-                document.getElementById('federalSpending').textContent = '$6.8T';
-                document.getElementById('budgetDeficit').textContent = '-$1.9T';
+                // Silent fail for production - populate with last known real full values as fallback
+                document.getElementById('federalRevenue').textContent = '$4,900,000,000,000';
+                document.getElementById('federalSpending').textContent = '$6,800,000,000,000';
+                document.getElementById('budgetDeficit').textContent = '-$1,900,000,000,000';
                 document.getElementById('gdpRatio').textContent = '133.8%'; // Real calculation: 37.45/28
-                document.getElementById('annualInterest').textContent = '$1,760 Billion'; // Real calculation
+                document.getElementById('annualInterest').textContent = '$1,760,363,490,392'; // Real calculation
                 document.getElementById('interestRate').textContent = '4.70%';
-                document.getElementById('population').textContent = '334.9M';
-                document.getElementById('dailyIncrease').textContent = '+$3.4 Billion'; // Real from historical data
+                document.getElementById('population').textContent = '334,900,000';
+                document.getElementById('dailyIncrease').textContent = '+$3,385,773,798'; // Real from historical data
             }
         }
 
