@@ -313,17 +313,6 @@ class FiscalDashboard {
       render: v => Utils.formatUSD(v || 0, 0)
     });
 
-    // 5. Operating Cash Balance - Use fallback data due to CORS restrictions
-    this.register("cash", {
-      title: "Operating Cash Balance",
-      badge: "DEMO",
-      fetcher: async () => {
-        // v1 DTS APIs are also blocked by CORS in browsers
-        throw new Error("DTS API blocked by CORS - using fallback data");
-      },
-      render: v => Utils.formatUSD(v || 0, 0)
-    });
-        
     // 5. Operating Cash Balance - Calculated estimate from Treasury operations
     this.register("cash", {
       title: "Operating Cash Balance",
