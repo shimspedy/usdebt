@@ -29,51 +29,17 @@ class DataManager {
 
   /**
    * Get fallback fiscal data when APIs are unavailable
-   * @returns {Object} Mock fiscal data
+   * @returns {Object} Empty data structure - forces API retry
    */
   getFallbackFiscalData() {
-    const currentDate = new Date().toISOString().split('T')[0];
-    const previousDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]; // 30 days ago
-    
+    console.warn('API fallback triggered - all data must come from Treasury APIs');
+    // Return empty structure to force API retry rather than showing stale data
     return {
-      data: [
-        {
-          // Current data - most recent from August 2025 Treasury data
-          record_date: "2025-08-31",
-          tot_pub_debt_out_amt: "37450000000000", // $37.45 trillion (recent actual)
-          
-          // Federal Receipts (FYTD) - using actual MTS field names and recent data
-          current_month_gross_rcpt_amt: "4918105525514", // $4.918 trillion FYTD (August 2025 actual)
-          
-          // Federal Outlays (FYTD) 
-          current_month_gross_outly_amt: "6734895725143", // $6.735 trillion FYTD (August 2025 actual)
-          
-          // Operating Cash Balance
-          open_mkt_opr_cash_bal_amt: "650000000000", // $650 billion cash balance (last reported)
-        },
-        {
-          // Previous data - 30 days ago for rate calculation
-          record_date: previousDate,
-          tot_pub_debt_out_amt: "37400000000000", // $37.4 trillion (slightly less)
-          
-          // Federal Receipts (FYTD) - previous period
-          current_month_gross_rcpt_amt: "4800000000000", // $4.8 trillion FYTD previous
-          
-          // Federal Outlays (FYTD) - previous period
-          current_month_gross_outly_amt: "6600000000000", // $6.6 trillion FYTD previous
-          
-          // Operating Cash Balance - previous
-          open_mkt_opr_cash_bal_amt: "620000000000", // $620 billion previous
-        }
-      ],
+      data: [],
       meta: {
-        count: 2,
-        labels: {
-          tot_pub_debt_out_amt: "Total Public Debt Outstanding (Amount)",
-          current_month_gross_rcpt_amt: "Current Month Gross Receipts Amount",
-          current_month_gross_outly_amt: "Current Month Gross Outlay Amount",
-          open_mkt_opr_cash_bal_amt: "Operating Cash Balance (Amount)"
-        }
+        count: 0,
+        error: 'Treasury API unavailable - retrying...',
+        labels: {}
       }
     };
   }
@@ -137,11 +103,10 @@ class DataManager {
       this.useFallbackData = false;
       return data;
     } catch (error) {
-      Utils.logError('Treasury API failed, using fallback data', error);
+      Utils.logError('Treasury API failed - will retry', error);
       this.useFallbackData = true;
-      const fallbackData = this.getFallbackFiscalData();
-      this.setCache(cacheKey, fallbackData);
-      return fallbackData;
+      // Don't cache failed requests, throw error to force proper error handling
+      throw new Error(`Treasury API unavailable: ${error.message}`);
     }
   }
 
@@ -280,6 +245,34 @@ class DataProcessor {
     const ratePerSec = this.calculateRatePerSecond(
       currentValue, previousValue, currentTime, previousTime
     );
+    
+    return {
+      baseValue: currentValue,
+      baseTs: currentTime,
+      ratePerSec,
+      meta: `As of ${current.record_date}`
+    };
+  }
+
+  /**
+   * Process generic data with two data points for rate calculation
+   * @param {Array} rows - API response data
+   * @param {string} field - Field name to extract value from
+   * @returns {Object} Processed state object
+   */
+  static processGenericData(rows, field) {
+    if (rows.length < 1) throw new Error("Insufficient data");
+    
+    const [current, previous] = rows;
+    const currentValue = Utils.toNumber(current[field]);
+    const currentTime = Utils.parseDate(current.record_date);
+    
+    let ratePerSec = 0;
+    if (previous && previous[field]) {
+      const previousValue = Utils.toNumber(previous[field]);
+      const previousTime = Utils.parseDate(previous.record_date);
+      ratePerSec = this.calculateRatePerSecond(currentValue, previousValue, currentTime, previousTime);
+    }
     
     return {
       baseValue: currentValue,
