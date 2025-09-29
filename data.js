@@ -95,18 +95,31 @@ class DataManager {
     if (path.includes('/dts/')) endpoint = 'dts';
     
     const baseUrl = this.getApiBase(endpoint);
-    const finalUrl = this.useProxy ? `${baseUrl}${queryString ? '?' + queryString : ''}` : `${baseUrl}${fullPath}`;
+    let finalUrl;
+    if (this.useProxy) {
+      finalUrl = queryString ? `${baseUrl}?${queryString}` : baseUrl;
+    } else {
+      finalUrl = `${baseUrl}${fullPath}`;
+    }
     
-    try {
-      const data = await this.fetchJSON(finalUrl);
-      this.setCache(cacheKey, data);
-      this.useFallbackData = false;
-      return data;
-    } catch (error) {
-      Utils.logError('Treasury API failed - will retry', error);
-      this.useFallbackData = true;
-      // Don't cache failed requests, throw error to force proper error handling
-      throw new Error(`Treasury API unavailable: ${error.message}`);
+    let attempt = 0;
+    let delay = 250; // initial backoff
+    while (attempt <= retries) {
+      try {
+        const data = await this.fetchJSON(finalUrl + (attempt > 0 ? `&cacheBust=${Date.now()}` : ''));
+        this.setCache(cacheKey, data);
+        this.useFallbackData = false;
+        return data;
+      } catch (error) {
+        attempt++;
+        Utils.logError(`Treasury API attempt ${attempt} failed`, error);
+        if (attempt > retries) {
+          this.useFallbackData = true;
+          throw new Error(`Treasury API unavailable after ${attempt} attempts: ${error.message}`);
+        }
+        await Utils.delay(delay);
+        delay = Math.min(delay * 2, 4000);
+      }
     }
   }
 
@@ -132,8 +145,36 @@ class DataManager {
       return data;
     } catch (error) {
       Utils.logError('WorldBank API', error);
+      // Provide fallback data for key indicators when World Bank API fails
+      const fallbackData = this.getWorldBankFallback(indicator);
+      if (fallbackData) {
+        this.setCache(url, fallbackData);
+        return fallbackData;
+      }
       throw error;
     }
+  }
+
+  /**
+   * Get fallback data for World Bank indicators when API fails
+   * @param {string} indicator - World Bank indicator code
+   * @returns {Array|null} Fallback data or null
+   */
+  getWorldBankFallback(indicator) {
+    const fallbacks = {
+      'SP.POP.TOTL': [{ // US Population
+        date: '2024',
+        value: 341814420, // Latest estimate
+        country: { value: 'United States' }
+      }],
+      'NY.GDP.MKTP.CD': [{ // US GDP Nominal
+        date: '2024', 
+        value: 28781000000000, // ~$28.78T estimate
+        country: { value: 'United States' }
+      }]
+    };
+    
+    return fallbacks[indicator] || null;
   }
 
   /**
@@ -207,23 +248,24 @@ class DataProcessor {
    * @returns {Object} Processed state object
    */
   static processDebtData(rows) {
-    if (rows.length < 2) throw new Error("Insufficient debt data");
-    
-    const [current, previous] = rows;
+    if (rows.length === 0) throw new Error("No debt data returned");
+    const current = rows[0];
+    const previous = rows[1];
     const currentValue = Utils.toNumber(current.tot_pub_debt_out_amt);
-    const previousValue = Utils.toNumber(previous.tot_pub_debt_out_amt);
     const currentTime = Utils.parseDate(current.record_date);
-    const previousTime = Utils.parseDate(previous.record_date);
-    
-    const ratePerSec = this.calculateRatePerSecond(
-      currentValue, previousValue, currentTime, previousTime
-    );
-    
+    let ratePerSec = 0;
+    if (previous) {
+      const previousValue = Utils.toNumber(previous.tot_pub_debt_out_amt);
+      const previousTime = Utils.parseDate(previous.record_date);
+      ratePerSec = this.calculateRatePerSecond(
+        currentValue, previousValue, currentTime, previousTime
+      );
+    }
     return {
       baseValue: currentValue,
       baseTs: currentTime,
       ratePerSec,
-      meta: `Base ${current.record_date} • Rate ${Utils.formatUSD(ratePerSec, CONFIG.constants.CURRENCY_DECIMAL_PLACES)}/s`
+      meta: previous ? `Base ${current.record_date} • Δ vs prev` : `As of ${current.record_date}`
     };
   }
 
@@ -234,18 +276,22 @@ class DataProcessor {
    * @returns {Object} Processed state object
    */
   static processMTSData(rows, field) {
-    if (rows.length < 2) throw new Error("Insufficient MTS data");
-    
-    const [current, previous] = rows;
-    const currentValue = Utils.toNumber(current[field]);
-    const previousValue = Utils.toNumber(previous[field]);
+    if (rows.length === 0) throw new Error("No MTS data returned");
+    const current = rows[0];
+    const previous = rows[1];
+    // Support alternate field names if provided
+    const candidates = [field, 'current_month_gross_rcpt_amt', 'current_month_gross_outly_amt'];
+    const pickField = candidates.find(f => current[f] != null) || field;
+    const currentValue = Utils.toNumber(current[pickField]);
     const currentTime = Utils.parseDate(current.record_date);
-    const previousTime = Utils.parseDate(previous.record_date);
-    
-    const ratePerSec = this.calculateRatePerSecond(
-      currentValue, previousValue, currentTime, previousTime
-    );
-    
+    let ratePerSec = 0;
+    if (previous) {
+      const previousValue = Utils.toNumber(previous[pickField]);
+      const previousTime = Utils.parseDate(previous.record_date);
+      ratePerSec = this.calculateRatePerSecond(
+        currentValue, previousValue, currentTime, previousTime
+      );
+    }
     return {
       baseValue: currentValue,
       baseTs: currentTime,
@@ -268,7 +314,7 @@ class DataProcessor {
     const currentTime = Utils.parseDate(current.record_date);
     
     let ratePerSec = 0;
-    if (previous && previous[field]) {
+    if (previous?.[field]) {
       const previousValue = Utils.toNumber(previous[field]);
       const previousTime = Utils.parseDate(previous.record_date);
       ratePerSec = this.calculateRatePerSecond(currentValue, previousValue, currentTime, previousTime);

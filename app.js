@@ -150,7 +150,20 @@ class FiscalDashboard {
           tile.lastRendered = renderedText;
         }
       });
+      // Update top banner summary if present
+      this.updateBanner();
     });
+  }
+
+  updateBanner() {
+    const banner = document.getElementById('primaryDebt');
+    if (!banner) return;
+    // Example: if debt tile ready remove 'Loading...'
+    const debtTile = this.tiles.get('debt');
+    if (debtTile?.state && banner.textContent.includes('Loading')) {
+      const liveValue = this.calculateLiveValue(debtTile.state);
+      banner.textContent = Utils.formatUSD(liveValue || debtTile.state.baseValue || 0, 0);
+    }
   }
 
   /**
@@ -191,6 +204,11 @@ class FiscalDashboard {
       if (newState.meta && ui.meta) {
         ui.meta.textContent = newState.meta;
       }
+
+      // Broadcast tile update for any legacy UI listeners
+      document.dispatchEvent(new CustomEvent('tileUpdated', {
+        detail: { id, state: newState }
+      }));
       
     } catch (error) {
       Utils.logError(`Tile ${id}`, error);
@@ -210,16 +228,14 @@ class FiscalDashboard {
     this.statusIndicator.setLoading();
     
     try {
-      // Load tiles in dependency order
-      const loadOrder = [
-        "debt", "receipts", "outlays", "deficit", "cash",
-        "pop", "gdp", "debt_per", "rcpt_per", "debt_gdp"
-      ];
-      
-      for (const tileId of loadOrder) {
-        if (this.tiles.has(tileId)) {
-          await this.reloadTile(tileId);
-        }
+      // Phase 1: Base primitives that hit external APIs directly (can run in parallel)
+      const phase1 = ["debt", "receipts", "outlays", "cash", "pop", "gdp"].filter(id => this.tiles.has(id));
+      await Promise.all(phase1.map(id => this.reloadTile(id)));
+
+      // Phase 2: Derived metrics that depend on previous states (sequential for clarity)
+      const phase2 = ["deficit", "debt_per", "rcpt_per", "debt_gdp"].filter(id => this.tiles.has(id));
+      for (const id of phase2) {
+        await this.reloadTile(id);
       }
       
       // Show live status when using real data
@@ -265,14 +281,15 @@ class FiscalDashboard {
         const response = await this.dataManager.fetchFiscalData(
           "/v1/accounting/mts/mts_table_1",
           {
-            fields: "record_date,current_month_gross_rcpt_amt,classification_desc",
+            // Using FYTD field per Treasury schema
+            fields: "record_date,current_fytd_rcpt_amt,classification_desc",
             filter: "record_type_cd:eq:SL,record_fiscal_year:eq:2025,classification_desc:eq:Year-to-Date",
             sort: "-record_date",
             "page[size]": 2,
             format: "json"
           }
         );
-        return DataProcessor.processMTSData(response.data || [], 'current_month_gross_rcpt_amt');
+        return DataProcessor.processMTSData(response.data || [], 'current_fytd_rcpt_amt');
       },
       render: v => Utils.formatUSD(v || 0, 0)
     });
@@ -285,14 +302,14 @@ class FiscalDashboard {
         const response = await this.dataManager.fetchFiscalData(
           "/v1/accounting/mts/mts_table_1",
           {
-            fields: "record_date,current_month_gross_outly_amt,classification_desc",
+            fields: "record_date,current_fytd_outly_amt,classification_desc",
             filter: "record_type_cd:eq:SL,record_fiscal_year:eq:2025,classification_desc:eq:Year-to-Date",
             sort: "-record_date",
             "page[size]": 2,
             format: "json"
           }
         );
-        return DataProcessor.processMTSData(response.data || [], 'current_month_gross_outly_amt');
+        return DataProcessor.processMTSData(response.data || [], 'current_fytd_outly_amt');
       },
       render: v => Utils.formatUSD(v || 0, 0)
     });
@@ -330,9 +347,9 @@ class FiscalDashboard {
           "/v1/accounting/dts/dts_table_1",
           {
             fields: "record_date,open_today_bal",
-            filter: "account_type:eq:Treasury General Account",
+            filter: "account_type:eq:Treasury General Account,table_nm:eq:Table I",
             sort: "-record_date",
-            "page[size]": 2,
+            "page[size]": 5,
             format: "json"
           }
         );
@@ -455,6 +472,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Create and initialize the dashboard
     window.app = new FiscalDashboard();
     await window.app.init();
+
+    // Debug panel (toggle with key 'D')
+    const panel = document.createElement('div');
+    panel.id = 'tileDebugPanel';
+    panel.style.cssText = 'position:fixed;bottom:0;right:0;background:#0f172acc;color:#fff;font:12px monospace;max-height:40vh;overflow:auto;padding:6px 8px;border-top-left-radius:6px;z-index:9999;display:none;';
+    document.body.appendChild(panel);
+    function refreshPanel() {
+      const rows = [];
+      window.app.tiles.forEach((t,id)=>{
+        rows.push(`${id}: ${t.state? '✔':'…'} ${t.state? Utils.formatUSD(t.state.baseValue||0,0):''}`);
+      });
+      panel.textContent = rows.join('\n');
+    }
+    setInterval(refreshPanel, 1500);
+    document.addEventListener('keydown', (e)=>{ if(e.key==='d' || e.key==='D'){ panel.style.display= panel.style.display==='none'?'block':'none'; }});
   } catch (error) {
     Utils.logError('App Initialization', error);
   }

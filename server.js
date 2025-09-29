@@ -24,7 +24,8 @@ const corsHeaders = {
 // Treasury API proxy endpoints + Additional Government APIs
 const TREASURY_ENDPOINTS = {
   '/api/debt': 'https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v2/accounting/od/debt_to_penny',
-  '/api/mts': 'https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v1/accounting/mts/mts_table_1'
+  '/api/mts': 'https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v1/accounting/mts/mts_table_1',
+  '/api/dts': 'https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v1/accounting/dts/dts_table_1'
   // Note: Census, BEA, and FRED APIs are called directly from frontend as they support CORS
 };
 

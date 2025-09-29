@@ -141,7 +141,8 @@ class CardFactory {
     element.className = "card relative rounded-xl shadow-sheet p-6";
     element.innerHTML = this.getCardHTML(title, badge);
     
-    Utils.$('#grid').appendChild(element);
+    const container = Utils.$('#tilesContainer') || Utils.$('#grid') || document.body;
+    container.appendChild(element);
     
     const fitNumber = new FitNum(element.querySelector('.fitwrap'));
     const metaElement = element.querySelector('[data-meta]');

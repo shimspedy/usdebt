@@ -155,7 +155,12 @@ class Utils {
    * @param {Error} error - Error object
    */
   static logError(context, error) {
-  // Error: [context] error
+    try {
+      const detail = error?.stack || error?.message || String(error);
+      console.error(`❌ [${context}]`, detail);
+    } catch (e) {
+      console.error('❌ [logError failure]', e);
+    }
   }
 
   /**

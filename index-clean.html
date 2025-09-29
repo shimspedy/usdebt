@@ -267,13 +267,8 @@
                 </div>
             </div>
 
-            <!-- Dashboard Tiles (Dynamic) -->
-            <div id="tilesContainer" class="stats-grid">
-                <!-- Tiles will be created dynamically by the dashboard -->
-            </div>
-
-            <!-- Legacy Statistics Grid (for compatibility) -->
-            <div class="stats-grid" style="display: none;" id="legacyStats">
+            <!-- Statistics Grid -->
+            <div class="stats-grid">
                 <div class="stat-card">
                     <div class="stat-title">Federal Revenue (YTD)</div>
                     <div class="stat-value" id="federalRevenue">Loading...</div>
@@ -303,6 +298,10 @@
             <!-- Chart Section -->
             <div class="chart-section">
                 <div class="chart-controls">
+                    <label class="filter-checkbox">
+                        <input type="checkbox" id="debtFilter" checked>
+                        <span>National Debt</span>
+                    </label>
                     <label class="filter-checkbox">
                         <input type="checkbox" id="revenueFilter" checked>
                         <span>Federal Revenue</span>
@@ -373,36 +372,13 @@
                     return;
                 }
 
-                // Presidential data with spending and party affiliation
-                const presidentialData = [
-                    { year: 2005, president: 'George W. Bush', party: 'Republican', spending: 2.47 },
-                    { year: 2006, president: 'George W. Bush', party: 'Republican', spending: 2.66 },
-                    { year: 2007, president: 'George W. Bush', party: 'Republican', spending: 2.73 },
-                    { year: 2008, president: 'George W. Bush', party: 'Republican', spending: 2.98 },
-                    { year: 2009, president: 'Barack Obama', party: 'Democrat', spending: 3.52 },
-                    { year: 2010, president: 'Barack Obama', party: 'Democrat', spending: 3.46 },
-                    { year: 2011, president: 'Barack Obama', party: 'Democrat', spending: 3.60 },
-                    { year: 2012, president: 'Barack Obama', party: 'Democrat', spending: 3.54 },
-                    { year: 2013, president: 'Barack Obama', party: 'Democrat', spending: 3.45 },
-                    { year: 2014, president: 'Barack Obama', party: 'Democrat', spending: 3.51 },
-                    { year: 2015, president: 'Barack Obama', party: 'Democrat', spending: 3.69 },
-                    { year: 2016, president: 'Barack Obama', party: 'Democrat', spending: 3.85 },
-                    { year: 2017, president: 'Donald Trump', party: 'Republican', spending: 3.98 },
-                    { year: 2018, president: 'Donald Trump', party: 'Republican', spending: 4.11 },
-                    { year: 2019, president: 'Donald Trump', party: 'Republican', spending: 4.45 },
-                    { year: 2020, president: 'Donald Trump', party: 'Republican', spending: 6.55 },
-                    { year: 2021, president: 'Joe Biden', party: 'Democrat', spending: 6.82 },
-                    { year: 2022, president: 'Joe Biden', party: 'Democrat', spending: 6.27 },
-                    { year: 2023, president: 'Joe Biden', party: 'Democrat', spending: 6.13 },
-                    { year: 2024, president: 'Joe Biden', party: 'Democrat', spending: 6.75 },
-                    { year: 2025, president: 'Joe Biden', party: 'Democrat', spending: 7.00 }
-                ];
-                
                 // Prepare chart data
-                const years = presidentialData.map(d => d.year);
-                const republicanData = presidentialData.map(d => d.party === 'Republican' ? d.spending : null);
-                const democratData = presidentialData.map(d => d.party === 'Democrat' ? d.spending : null);
-                const revenueData = presidentialData.map(d => d.spending * 0.85); // Revenue roughly 85% of spending
+                const years = historicalData.data.map(d => d.year);
+                const debtData = historicalData.data.map(d => d.debt / 1e12); // Convert to trillions
+                
+                // Create sample spending data (you can replace with real data)
+                const spendingData = historicalData.data.map(d => (d.debt * 0.2) / 1e12); // Rough estimate
+                const revenueData = historicalData.data.map(d => (d.debt * 0.18) / 1e12); // Rough estimate
 
                 comprehensiveChart = new Chart(ctx, {
                     type: 'line',
@@ -410,24 +386,22 @@
                         labels: years,
                         datasets: [
                             {
-                                label: 'Republican Spending ($T)',
-                                data: republicanData,
-                                type: 'bar',
-                                backgroundColor: 'rgba(220, 38, 38, 0.7)',
-                                borderColor: '#dc2626',
-                                borderWidth: 2,
-                                spanGaps: false,
-                                skipNull: true
+                                label: 'National Debt ($T)',
+                                data: debtData,
+                                borderColor: '#ef4444',
+                                backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                                fill: false,
+                                tension: 0.3,
+                                pointRadius: 3,
+                                pointHoverRadius: 6
                             },
                             {
-                                label: 'Democrat Spending ($T)',
-                                data: democratData,
+                                label: 'Federal Spending ($T)',
+                                data: spendingData,
                                 type: 'bar',
-                                backgroundColor: 'rgba(37, 99, 235, 0.7)',
-                                borderColor: '#2563eb',
-                                borderWidth: 2,
-                                spanGaps: false,
-                                skipNull: true
+                                backgroundColor: 'rgba(59, 130, 246, 0.6)',
+                                borderColor: '#3b82f6',
+                                borderWidth: 1
                             },
                             {
                                 label: 'Federal Revenue ($T)',
@@ -447,7 +421,7 @@
                         plugins: {
                             title: {
                                 display: true,
-                                text: 'U.S. PRESIDENTIAL SPENDING BY PARTY: Revenue vs Expenditure',
+                                text: 'U.S. FISCAL ANALYSIS: Debt, Spending & Revenue (Historical)',
                                 color: '#ffffff',
                                 font: { size: 16, weight: 'bold' }
                             },
@@ -460,39 +434,11 @@
                                 }
                             },
                             tooltip: {
-                                backgroundColor: 'rgba(0, 0, 0, 0.9)',
+                                backgroundColor: 'rgba(0, 0, 0, 0.8)',
                                 titleColor: '#ffffff',
                                 bodyColor: '#ffffff',
-                                borderColor: 'rgba(255, 255, 255, 0.3)',
-                                borderWidth: 1,
-                                callbacks: {
-                                    title: function(context) {
-                                        const year = context[0].label;
-                                        const dataPoint = presidentialData.find(d => d.year == year);
-                                        return dataPoint ? `${year} - President ${dataPoint.president}` : year;
-                                    },
-                                    label: function(context) {
-                                        const year = context.label;
-                                        const value = context.parsed.y;
-                                        
-                                        if (context.datasetIndex === 0 || context.datasetIndex === 1) {
-                                            // Spending datasets
-                                            const party = context.datasetIndex === 0 ? 'Republican' : 'Democrat';
-                                            return `${party} Spending: $${value}T`;
-                                        } else {
-                                            // Revenue dataset
-                                            return `Federal Revenue: $${value.toFixed(2)}T`;
-                                        }
-                                    },
-                                    afterLabel: function(context) {
-                                        const year = context.label;
-                                        const dataPoint = presidentialData.find(d => d.year == year);
-                                        if (dataPoint && (context.datasetIndex === 0 || context.datasetIndex === 1)) {
-                                            return `Party: ${dataPoint.party}`;
-                                        }
-                                        return '';
-                                    }
-                                }
+                                borderColor: 'rgba(255, 255, 255, 0.2)',
+                                borderWidth: 1
                             }
                         },
                         scales: {
@@ -525,7 +471,7 @@
 
         // Setup chart filter functionality
         function setupChartFilters() {
-            const filters = ['revenue', 'republican', 'democrat'];
+            const filters = ['debt', 'revenue', 'republican', 'democrat'];
             
             filters.forEach(filterType => {
                 const checkbox = document.getElementById(filterType + 'Filter');
@@ -544,14 +490,15 @@
             let datasetIndex = -1;
             
             switch(type) {
-                case 'republican':
-                    datasetIndex = comprehensiveChart.data.datasets.findIndex(d => d.label.includes('Republican Spending'));
-                    break;
-                case 'democrat':
-                    datasetIndex = comprehensiveChart.data.datasets.findIndex(d => d.label.includes('Democrat Spending'));
+                case 'debt':
+                    datasetIndex = comprehensiveChart.data.datasets.findIndex(d => d.label.includes('National Debt'));
                     break;
                 case 'revenue':
                     datasetIndex = comprehensiveChart.data.datasets.findIndex(d => d.label.includes('Federal Revenue'));
+                    break;
+                case 'republican':
+                case 'democrat':
+                    datasetIndex = comprehensiveChart.data.datasets.findIndex(d => d.label.includes('Federal Spending'));
                     break;
             }
             
@@ -596,34 +543,11 @@
                 await initializeComprehensiveChart();
             }, 500);
             
-            // Debug: Log available components
-            console.log('🔍 Available components:', {
-                FiscalDashboard: typeof FiscalDashboard,
-                DataManager: typeof DataManager,
-                Utils: typeof Utils,
-                CONFIG: typeof CONFIG
-            });
-            
             // If dashboard components are available, they will initialize automatically
             if (typeof FiscalDashboard !== 'undefined') {
                 console.log('✅ Fiscal dashboard will initialize via app.js');
-                // Show the dynamic tiles container
-                const tilesContainer = document.getElementById('tilesContainer');
-                const legacyStats = document.getElementById('legacyStats');
-                if (tilesContainer && legacyStats) {
-                    tilesContainer.style.display = 'grid';
-                    legacyStats.style.display = 'none';
-                }
             } else {
                 console.log('⚠️ Dashboard not available, showing basic fallback data');
-                // Show the legacy stats container
-                const tilesContainer = document.getElementById('tilesContainer');
-                const legacyStats = document.getElementById('legacyStats');
-                if (tilesContainer && legacyStats) {
-                    tilesContainer.style.display = 'none';
-                    legacyStats.style.display = 'grid';
-                }
-                
                 // Show some fallback content
                 document.getElementById('primaryDebt').textContent = '$35,000,000,000,000';
                 document.getElementById('federalRevenue').textContent = 'Loading...';
