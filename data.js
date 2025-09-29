@@ -54,21 +54,37 @@ class DataManager {
   }
 
   /**
-   * Generic JSON fetch with error handling
+   * Generic JSON fetch with error handling and timeout
    * @param {string} url - URL to fetch
    * @returns {Promise<Object>} JSON response
    */
   async fetchJSON(url) {
-    const response = await fetch(url, { 
-      cache: "no-store", 
-      mode: "cors" 
-    });
+    console.log(`🌐 Fetching: ${url}`);
     
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+    
+    try {
+      const response = await fetch(url, { 
+        cache: "no-store", 
+        mode: "cors",
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      console.log(`✅ API Success: ${url} - Got ${data?.data?.length || 0} records`);
+      return data;
+    } catch (error) {
+      clearTimeout(timeoutId);
+      console.error(`❌ API Failed: ${url} - ${error.message}`);
+      throw error;
     }
-    
-    return response.json();
   }
 
   /**

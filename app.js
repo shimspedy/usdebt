@@ -259,16 +259,27 @@ class FiscalDashboard {
       title: "US National Debt",
       badge: "LIVE",
       fetcher: async () => {
-        const response = await this.dataManager.fetchFiscalData(
-          "/v2/accounting/od/debt_to_penny",
-          {
-            fields: "record_date,tot_pub_debt_out_amt",
-            sort: "-record_date",
-            "page[size]": 2,
-            format: "json"
-          }
-        );
-        return DataProcessor.processDebtData(response.data || []);
+        try {
+          const response = await this.dataManager.fetchFiscalData(
+            "/v2/accounting/od/debt_to_penny",
+            {
+              fields: "record_date,tot_pub_debt_out_amt",
+              sort: "-record_date",
+              "page[size]": 3,
+              format: "json"
+            }
+          );
+          return DataProcessor.processDebtData(response.data || []);
+        } catch (error) {
+          // Fallback to current estimate when API fails
+          console.warn('Using debt fallback due to API failure:', error.message);
+          return {
+            baseValue: 35700000000000, // $35.7T current estimate
+            baseTs: Utils.nowSeconds(),
+            ratePerSec: 95000, // ~$95K per second growth rate
+            meta: 'Estimated (API unavailable)'
+          };
+        }
       },
       render: v => Utils.formatUSD(v || 0, 0)
     });
@@ -358,24 +369,44 @@ class FiscalDashboard {
       render: v => Utils.formatUSD(v || 0, 0)
     });
 
-    // 6. US Population (estimated) - API only, no fallbacks
+    // 6. US Population (estimated) - API with fallback
     this.register("pop", {
       title: "US Population (est.)",
       badge: "API",
       fetcher: async () => {
-        const data = await this.dataManager.fetchWorldBank("SP.POP.TOTL", 8);
-        return DataProcessor.processWorldBankData(data);
+        try {
+          const data = await this.dataManager.fetchWorldBank("SP.POP.TOTL", 8);
+          return DataProcessor.processWorldBankData(data);
+        } catch (error) {
+          console.warn('Using population fallback due to API failure:', error.message);
+          return {
+            baseValue: 341814420, // 2024 estimate
+            baseTs: Utils.nowSeconds(),
+            ratePerSec: 4.3, // ~4.3 people per second growth
+            meta: 'Estimated (API unavailable)'
+          };
+        }
       },
       render: v => Utils.formatNumber(v || 0)
     });
 
-    // 7. US GDP (nominal, estimated) - API only, no fallbacks
+    // 7. US GDP (nominal, estimated) - API with fallback
     this.register("gdp", {
       title: "US GDP (nominal, est.)",
       badge: "API",
       fetcher: async () => {
-        const data = await this.dataManager.fetchWorldBank("NY.GDP.MKTP.CD", 8);
-        return DataProcessor.processWorldBankData(data);
+        try {
+          const data = await this.dataManager.fetchWorldBank("NY.GDP.MKTP.CD", 8);
+          return DataProcessor.processWorldBankData(data);
+        } catch (error) {
+          console.warn('Using GDP fallback due to API failure:', error.message);
+          return {
+            baseValue: 28781000000000, // ~$28.78T estimate
+            baseTs: Utils.nowSeconds(),
+            ratePerSec: 912000, // GDP growth per second
+            meta: 'Estimated (API unavailable)'
+          };
+        }
       },
       render: v => Utils.formatUSD(v || 0, 0)
     });
