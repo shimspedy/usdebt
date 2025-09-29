@@ -244,21 +244,21 @@
         <div class="main-grid">
             <!-- Primary Debt Display -->
             <div class="debt-display">
-                <div class="debt-amount" id="primaryDebt">$35.70T</div>
+                <div class="debt-amount" id="primaryDebt">$35,700,000,000,000</div>
                 <div class="debt-label">NATIONAL DEBT OF THE UNITED STATES</div>
                 
                 <div class="debt-info">
                     <div class="info-item">
                         <div class="info-label">Debt Per Citizen</div>
-                        <div class="info-value" id="debtPerCitizen">$104.5K</div>
+                        <div class="info-value" id="debtPerCitizen">$104,500</div>
                     </div>
                     <div class="info-item">
                         <div class="info-label">Debt Per Taxpayer</div>
-                        <div class="info-value" id="debtPerTaxpayer">$256.0K</div>
+                        <div class="info-value" id="debtPerTaxpayer">$256,000</div>
                     </div>
                     <div class="info-item">
                         <div class="info-label">Annual Interest</div>
-                        <div class="info-value" id="annualInterest">$1.10T</div>
+                        <div class="info-value" id="annualInterest">$1,100,000,000,000</div>
                     </div>
                     <div class="info-item">
                         <div class="info-label">Debt to GDP Ratio</div>
@@ -276,15 +276,15 @@
             <div class="stats-grid" style="display: grid;" id="legacyStats">
                 <div class="stat-card">
                     <div class="stat-title">Federal Revenue (YTD)</div>
-                    <div class="stat-value" id="federalRevenue">$4.20T</div>
+                    <div class="stat-value" id="federalRevenue">$4,200,000,000,000</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-title">Federal Spending (YTD)</div>
-                    <div class="stat-value" id="federalSpending">$6.80T</div>
+                    <div class="stat-value" id="federalSpending">$6,800,000,000,000</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-title">Budget Deficit/Surplus</div>
-                    <div class="stat-value" id="budgetDeficit">-$2.60T</div>
+                    <div class="stat-value" id="budgetDeficit">-$2,600,000,000,000</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-title">U.S. Population</div>
@@ -292,11 +292,11 @@
                 </div>
                 <div class="stat-card">
                     <div class="stat-title">GDP Estimate</div>
-                    <div class="stat-value" id="gdpValue">$28.78T</div>
+                    <div class="stat-value" id="gdpValue">$28,781,000,000,000</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-title">Operating Cash</div>
-                    <div class="stat-value" id="interestRate">$650.0B</div>
+                    <div class="stat-value" id="interestRate">$650,000,000,000</div>
                 </div>
             </div>
 
@@ -594,7 +594,7 @@
                 budgetDeficit: -2600000000000
             };
             
-            // Force immediate update of ALL displays
+            // Force immediate update of ALL displays with full amounts
             console.log('🔄 Updating primary debt display...');
             updateElement('primaryDebt', formatUSD(estimates.primaryDebt));
             updateElement('debtPerCitizen', formatUSD(estimates.debtPerCitizen));
@@ -603,7 +603,7 @@
             updateElement('gdpRatio', estimates.gdpRatio.toFixed(1) + '%');
             
             console.log('🔄 Updating stats displays...');
-            updateElement('population', estimates.population.toLocaleString());
+            updateElement('population', estimates.population.toLocaleString('en-US'));
             updateElement('gdpValue', formatUSD(estimates.gdpValue));
             updateElement('federalRevenue', formatUSD(estimates.federalRevenue));
             updateElement('federalSpending', formatUSD(estimates.federalSpending));
@@ -653,24 +653,15 @@
             }
         }
         
-        // Format USD currency
+        // Format USD currency - always show full amounts with commas
         function formatUSD(amount) {
             if (amount === null || amount === undefined) return 'N/A';
             
-            const absAmount = Math.abs(amount);
             const sign = amount < 0 ? '-' : '';
+            const absAmount = Math.abs(amount);
             
-            if (absAmount >= 1e12) {
-                return sign + '$' + (absAmount / 1e12).toFixed(2) + 'T';
-            } else if (absAmount >= 1e9) {
-                return sign + '$' + (absAmount / 1e9).toFixed(2) + 'B';
-            } else if (absAmount >= 1e6) {
-                return sign + '$' + (absAmount / 1e6).toFixed(2) + 'M';
-            } else if (absAmount >= 1e3) {
-                return sign + '$' + (absAmount / 1e3).toFixed(0) + 'K';
-            } else {
-                return sign + '$' + absAmount.toFixed(0);
-            }
+            // Always show full amount with commas, no abbreviations
+            return sign + '$' + Math.round(absAmount).toLocaleString('en-US');
         }
         
         // Start live updates with growth rates
@@ -698,7 +689,7 @@
                         if (key === 'primaryDebt' || key.includes('debt') || key.includes('Value') || key.includes('Revenue') || key.includes('Spending') || key.includes('Interest')) {
                             updateElement(elementId, formatUSD(newValue));
                         } else if (key === 'population') {
-                            updateElement(elementId, Math.round(newValue).toLocaleString());
+                            updateElement(elementId, Math.round(newValue).toLocaleString('en-US'));
                         } else {
                             updateElement(elementId, newValue.toFixed(1));
                         }
