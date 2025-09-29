@@ -564,11 +564,31 @@
         }
 
         // Initialize dashboard when DOM is ready
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('🚀 Starting US Debt Clock...');
+        document.addEventListener('DOMContentLoaded', async function() {
+            console.log('🚀 Starting US Debt Clock with API data priority...');
             
-            // Show data immediately
-            showFallbackData();
+            // Try to initialize the API-based dashboard system first
+            try {
+                if (typeof FiscalDashboard !== 'undefined') {
+                    console.log('✅ Initializing API-based dashboard system');
+                    const app = new FiscalDashboard();
+                    window.app = app;
+                    await app.init();
+                    
+                    // Show the dynamic tiles container
+                    const tilesContainer = document.getElementById('tilesContainer');
+                    const legacyStats = document.getElementById('legacyStats');
+                    if (tilesContainer && legacyStats) {
+                        tilesContainer.style.display = 'grid';
+                        legacyStats.style.display = 'none';
+                    }
+                } else {
+                    throw new Error('Dashboard components not available');
+                }
+            } catch (error) {
+                console.warn('⚠️ API dashboard failed, trying cached data:', error.message);
+                await showCachedAPIData();
+            }
             
             // Initialize chart
             setTimeout(async () => {
@@ -576,40 +596,132 @@
             }, 500);
         });
         
-        // Fallback data display function
-        function showFallbackData() {
-            console.log('📊 Displaying fallback data immediately...');
+        // Cached API data display function - uses most recent API data available
+        async function showCachedAPIData() {
+            console.log('📊 Attempting to fetch most recent API data...');
             
-            // Show current estimates
-            const estimates = {
-                primaryDebt: 35700000000000,
-                debtPerCitizen: 104500,
-                debtPerTaxpayer: 256000,
-                annualInterest: 1100000000000,
-                gdpRatio: 124.0,
-                population: 341814420,
-                gdpValue: 28781000000000,
-                federalRevenue: 4200000000000,
-                federalSpending: 6800000000000,
-                budgetDeficit: -2600000000000
-            };
+            let apiData = {};
             
-            // Force immediate update of ALL displays with full amounts
-            console.log('🔄 Updating primary debt display...');
-            updateElement('primaryDebt', formatUSD(estimates.primaryDebt));
-            updateElement('debtPerCitizen', formatUSD(estimates.debtPerCitizen));
-            updateElement('debtPerTaxpayer', formatUSD(estimates.debtPerTaxpayer));
-            updateElement('annualInterest', formatUSD(estimates.annualInterest));
-            updateElement('gdpRatio', estimates.gdpRatio.toFixed(1) + '%');
+            // Try to fetch current debt from Treasury API
+            try {
+                console.log('🌐 Fetching current debt from Treasury API...');
+                const debtResponse = await fetch('/api/debt?fields=record_date,tot_pub_debt_out_amt&sort=-record_date&page[size]=1&format=json');
+                if (debtResponse.ok) {
+                    const debtData = await debtResponse.json();
+                    if (debtData.data && debtData.data.length > 0) {
+                        apiData.primaryDebt = parseFloat(debtData.data[0].tot_pub_debt_out_amt);
+                        apiData.debtDate = debtData.data[0].record_date;
+                        console.log('✅ Got live debt data:', formatUSD(apiData.primaryDebt));
+                    }
+                }
+            } catch (error) {
+                console.warn('⚠️ Debt API failed:', error.message);
+            }
             
-            console.log('🔄 Updating stats displays...');
-            updateElement('population', estimates.population.toLocaleString('en-US'));
-            updateElement('gdpValue', formatUSD(estimates.gdpValue));
-            updateElement('federalRevenue', formatUSD(estimates.federalRevenue));
-            updateElement('federalSpending', formatUSD(estimates.federalSpending));
-            updateElement('budgetDeficit', formatUSD(estimates.budgetDeficit));
+            // Try to fetch receipts and outlays from MTS API
+            try {
+                console.log('🌐 Fetching receipts from MTS API...');
+                const receiptsResponse = await fetch('/api/mts?fields=record_date,current_fytd_rcpt_amt&filter=record_type_cd:eq:SL,record_fiscal_year:eq:2025&sort=-record_date&page[size]=1&format=json');
+                if (receiptsResponse.ok) {
+                    const receiptsData = await receiptsResponse.json();
+                    if (receiptsData.data && receiptsData.data.length > 0) {
+                        apiData.federalRevenue = parseFloat(receiptsData.data[0].current_fytd_rcpt_amt) * 1000000; // Convert millions to actual amount
+                        console.log('✅ Got live receipts data:', formatUSD(apiData.federalRevenue));
+                    }
+                }
+                
+                console.log('🌐 Fetching outlays from MTS API...');
+                const outlaysResponse = await fetch('/api/mts?fields=record_date,current_fytd_outly_amt&filter=record_type_cd:eq:SL,record_fiscal_year:eq:2025&sort=-record_date&page[size]=1&format=json');
+                if (outlaysResponse.ok) {
+                    const outlaysData = await outlaysResponse.json();
+                    if (outlaysData.data && outlaysData.data.length > 0) {
+                        apiData.federalSpending = parseFloat(outlaysData.data[0].current_fytd_outly_amt) * 1000000; // Convert millions to actual amount
+                        console.log('✅ Got live outlays data:', formatUSD(apiData.federalSpending));
+                    }
+                }
+            } catch (error) {
+                console.warn('⚠️ MTS API failed:', error.message);
+            }
             
-            // Force show legacy stats container immediately
+            // Try to fetch population from World Bank
+            try {
+                console.log('🌐 Fetching population from World Bank API...');
+                const popResponse = await fetch('https://api.worldbank.org/v2/country/US/indicator/SP.POP.TOTL?format=json&per_page=5');
+                if (popResponse.ok) {
+                    const popData = await popResponse.json();
+                    if (popData[1] && popData[1].length > 0) {
+                        const latestPop = popData[1].find(record => record.value != null);
+                        if (latestPop) {
+                            apiData.population = latestPop.value;
+                            apiData.popYear = latestPop.date;
+                            console.log('✅ Got population data:', apiData.population.toLocaleString());
+                        }
+                    }
+                }
+            } catch (error) {
+                console.warn('⚠️ World Bank Population API failed:', error.message);
+            }
+            
+            // Try to fetch GDP from World Bank
+            try {
+                console.log('🌐 Fetching GDP from World Bank API...');
+                const gdpResponse = await fetch('https://api.worldbank.org/v2/country/US/indicator/NY.GDP.MKTP.CD?format=json&per_page=5');
+                if (gdpResponse.ok) {
+                    const gdpData = await gdpResponse.json();
+                    if (gdpData[1] && gdpData[1].length > 0) {
+                        const latestGDP = gdpData[1].find(record => record.value != null);
+                        if (latestGDP) {
+                            apiData.gdpValue = latestGDP.value;
+                            apiData.gdpYear = latestGDP.date;
+                            console.log('✅ Got GDP data:', formatUSD(apiData.gdpValue));
+                        }
+                    }
+                }
+            } catch (error) {
+                console.warn('⚠️ World Bank GDP API failed:', error.message);
+            }
+            
+            // Calculate derived values from API data
+            if (apiData.primaryDebt && apiData.population) {
+                apiData.debtPerCitizen = apiData.primaryDebt / apiData.population;
+                apiData.debtPerTaxpayer = apiData.primaryDebt / (apiData.population * 0.408); // ~40.8% are taxpayers
+            }
+            
+            if (apiData.federalRevenue && apiData.federalSpending) {
+                apiData.budgetDeficit = apiData.federalRevenue - apiData.federalSpending;
+            }
+            
+            if (apiData.primaryDebt && apiData.gdpValue) {
+                apiData.gdpRatio = (apiData.primaryDebt / apiData.gdpValue) * 100;
+            }
+            
+            // Estimate annual interest (approximately 3.1% of debt)
+            if (apiData.primaryDebt) {
+                apiData.annualInterest = apiData.primaryDebt * 0.031;
+            }
+            
+            console.log('📊 Using real API data where available:');
+            console.log('- Debt:', apiData.primaryDebt ? 'API' : 'MISSING');
+            console.log('- Revenue:', apiData.federalRevenue ? 'API' : 'MISSING');
+            console.log('- Spending:', apiData.federalSpending ? 'API' : 'MISSING');
+            console.log('- Population:', apiData.population ? 'API' : 'MISSING');
+            console.log('- GDP:', apiData.gdpValue ? 'API' : 'MISSING');
+            
+            // Update displays with real API data (show "Data Unavailable" if no API data)
+            console.log('🔄 Updating displays with API data...');
+            updateElement('primaryDebt', apiData.primaryDebt ? formatUSD(apiData.primaryDebt) : 'Treasury API Unavailable');
+            updateElement('debtPerCitizen', apiData.debtPerCitizen ? formatUSD(apiData.debtPerCitizen) : 'Calculating...');
+            updateElement('debtPerTaxpayer', apiData.debtPerTaxpayer ? formatUSD(apiData.debtPerTaxpayer) : 'Calculating...');
+            updateElement('annualInterest', apiData.annualInterest ? formatUSD(apiData.annualInterest) : 'Calculating...');
+            updateElement('gdpRatio', apiData.gdpRatio ? apiData.gdpRatio.toFixed(1) + '%' : 'Calculating...');
+            
+            updateElement('population', apiData.population ? apiData.population.toLocaleString('en-US') : 'World Bank API Unavailable');
+            updateElement('gdpValue', apiData.gdpValue ? formatUSD(apiData.gdpValue) : 'World Bank API Unavailable');
+            updateElement('federalRevenue', apiData.federalRevenue ? formatUSD(apiData.federalRevenue) : 'Treasury MTS API Unavailable');  
+            updateElement('federalSpending', apiData.federalSpending ? formatUSD(apiData.federalSpending) : 'Treasury MTS API Unavailable');
+            updateElement('budgetDeficit', apiData.budgetDeficit ? formatUSD(apiData.budgetDeficit) : 'Calculating...');
+            
+            // Force show legacy stats container
             const tilesContainer = document.getElementById('tilesContainer');
             const legacyStats = document.getElementById('legacyStats');
             console.log('🔄 Switching to legacy stats display...');
@@ -630,10 +742,14 @@
                 el.classList.remove('pulse');
             });
             
-            console.log('✅ Fallback data displayed successfully');
+            console.log('✅ API data displayed successfully');
             
-            // Start live updates
-            startLiveUpdates(estimates);
+            // Start live updates with API data (only if we have debt data for growth calculation)
+            if (apiData.primaryDebt) {
+                startLiveUpdatesWithAPIData(apiData);
+            } else {
+                console.log('⚠️ No debt data available for live updates');
+            }
         }
         
         // Helper function to update elements safely
@@ -664,16 +780,17 @@
             return sign + '$' + Math.round(absAmount).toLocaleString('en-US');
         }
         
-        // Start live updates with growth rates
-        function startLiveUpdates(estimates) {
+        // Start live updates with real API data and realistic growth rates
+        function startLiveUpdatesWithAPIData(apiData) {
+            console.log('🔄 Starting live updates with API data...');
+            
+            // Conservative growth rates based on historical data
             const growthRates = {
-                primaryDebt: 95000, // $95k per second
-                debtPerCitizen: 0.28, // per second
-                annualInterest: 35000, // per second
-                population: 4.3, // per second
-                gdpValue: 912000, // per second
-                federalRevenue: 133000, // per second
-                federalSpending: 215000 // per second
+                primaryDebt: 95000, // ~$95k per second debt growth
+                population: 4.3, // ~4.3 people per second
+                gdpValue: 912000, // GDP growth per second  
+                federalRevenue: apiData.federalRevenue ? (apiData.federalRevenue * 0.000004) : 0, // FYTD revenue growth
+                federalSpending: apiData.federalSpending ? (apiData.federalSpending * 0.000005) : 0 // FYTD spending growth
             };
             
             const startTime = Date.now();
@@ -681,35 +798,44 @@
             setInterval(() => {
                 const elapsed = (Date.now() - startTime) / 1000;
                 
-                Object.keys(growthRates).forEach(key => {
-                    if (estimates[key] !== undefined) {
-                        const newValue = estimates[key] + (growthRates[key] * elapsed);
-                        const elementId = key;
+                // Update debt if we have API data
+                if (apiData.primaryDebt) {
+                    const currentDebt = apiData.primaryDebt + (growthRates.primaryDebt * elapsed);
+                    updateElement('primaryDebt', formatUSD(currentDebt));
+                    
+                    // Update annual interest (3.1% of current debt)
+                    const currentInterest = currentDebt * 0.031;
+                    updateElement('annualInterest', formatUSD(currentInterest));
+                    
+                    // Update per-citizen calculations if we have population
+                    if (apiData.population) {
+                        const currentPop = apiData.population + (growthRates.population * elapsed);
+                        updateElement('population', Math.round(currentPop).toLocaleString('en-US'));
+                        updateElement('debtPerCitizen', formatUSD(currentDebt / currentPop));
+                        updateElement('debtPerTaxpayer', formatUSD(currentDebt / (currentPop * 0.408)));
                         
-                        if (key === 'primaryDebt' || key.includes('debt') || key.includes('Value') || key.includes('Revenue') || key.includes('Spending') || key.includes('Interest')) {
-                            updateElement(elementId, formatUSD(newValue));
-                        } else if (key === 'population') {
-                            updateElement(elementId, Math.round(newValue).toLocaleString('en-US'));
-                        } else {
-                            updateElement(elementId, newValue.toFixed(1));
-                        }
-                        
-                        // Update derived values
-                        if (key === 'primaryDebt' || key === 'population') {
-                            const currentDebt = estimates.primaryDebt + (growthRates.primaryDebt * elapsed);
-                            const currentPop = estimates.population + (growthRates.population * elapsed);
-                            updateElement('debtPerCitizen', formatUSD(currentDebt / currentPop));
-                            updateElement('debtPerTaxpayer', formatUSD(currentDebt / (currentPop * 0.408))); // ~40.8% taxpayers
-                        }
-                        
-                        if (key === 'federalSpending' || key === 'federalRevenue') {
-                            const currentRevenue = estimates.federalRevenue + (growthRates.federalRevenue * elapsed);
-                            const currentSpending = estimates.federalSpending + (growthRates.federalSpending * elapsed);
-                            updateElement('budgetDeficit', formatUSD(currentRevenue - currentSpending));
+                        // Update debt-to-GDP ratio if we have GDP
+                        if (apiData.gdpValue) {
+                            const currentGDP = apiData.gdpValue + (growthRates.gdpValue * elapsed);
+                            updateElement('gdpValue', formatUSD(currentGDP));
+                            updateElement('gdpRatio', ((currentDebt / currentGDP) * 100).toFixed(1) + '%');
                         }
                     }
-                });
-            }, 1000);
+                }
+                
+                // Update federal finances if we have the data
+                if (apiData.federalRevenue && apiData.federalSpending) {
+                    const currentRevenue = apiData.federalRevenue + (growthRates.federalRevenue * elapsed);
+                    const currentSpending = apiData.federalSpending + (growthRates.federalSpending * elapsed);
+                    
+                    updateElement('federalRevenue', formatUSD(currentRevenue));
+                    updateElement('federalSpending', formatUSD(currentSpending));
+                    updateElement('budgetDeficit', formatUSD(currentRevenue - currentSpending));
+                }
+                
+            }, 1000); // Update every second
+            
+            console.log('✅ Live updates started with API data');
         }
                 const tilesContainer = document.getElementById('tilesContainer');
                 const legacyStats = document.getElementById('legacyStats');
