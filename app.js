@@ -7,7 +7,7 @@ class FiscalDashboard {
     this.tiles = new Map();
     this.dataManager = new DataManager();
     this.statusIndicator = null;
-    this.animationLoop = new AnimationLoop();
+    this.animationLoop = typeof AnimationLoop !== 'undefined' ? new AnimationLoop() : null;
     this.initialized = false;
     
     // Bind methods to preserve 'this' context
